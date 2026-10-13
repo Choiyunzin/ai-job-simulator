@@ -1,0 +1,26 @@
+{
+  "name": "ai-job-simulator",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI와 함께라면, 내 일은 어떻게 달라질까? — AI와 함께 일하기 시뮬레이터",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:single": "node scripts/build-single.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}
