@@ -5,3 +5,7 @@ job-list.js
 
 # 빌드 부산물(아티팩트 게시용 본문만 있는 버전)
 dist/artifact.html
+
+# 사내 직무 목록이 들어간 파일
+*.tsv
+*-사내.html

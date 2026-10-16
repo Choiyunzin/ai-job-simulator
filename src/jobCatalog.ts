@@ -65,7 +65,7 @@ declare global { interface Window { JOB_LIST?: string } }
 
 export type CatalogSource = 'file' | 'pasted' | 'none';
 
-/** 같은 폴더의 job-list.js(window.JOB_LIST)에 목록이 있으면 그것을 먼저 씁니다. */
+/** HTML 맨 위 '직무 목록' 칸(window.JOB_LIST)에 목록이 있으면 그것을 먼저 씁니다. */
 function fromFile(): JobRow[] {
   try { return typeof window.JOB_LIST === 'string' ? parseJobList(window.JOB_LIST).rows : []; } catch { return []; }
 }

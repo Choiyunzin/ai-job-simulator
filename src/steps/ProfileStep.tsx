@@ -447,7 +447,7 @@ function QStory() {
   );
 }
 
-/** 사내 직무 목록 불러오기: job-list.js가 없을 때 화면에서 직접 붙여넣거나 CSV 파일을 고릅니다. */
+/** 사내 직무 목록 불러오기: HTML에 목록이 없을 때 화면에서 직접 붙여넣거나 CSV 파일을 고릅니다. */
 function JobListImporter({ catalog }: { catalog: Catalog }) {
   const [text, setText] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
@@ -462,7 +462,7 @@ function JobListImporter({ catalog }: { catalog: Catalog }) {
   };
   const onFile = async (f?: File) => { if (f) apply(await readTextFile(f)); if (fileRef.current) fileRef.current.value = ''; };
 
-  const status = catalog.source === 'file' ? `job-list.js 파일의 목록 ${catalog.rows.length}개를 쓰고 있습니다.`
+  const status = catalog.source === 'file' ? `이 HTML 파일에 들어 있는 목록 ${catalog.rows.length}개를 쓰고 있습니다. 메모장으로 파일 맨 위 '직무 목록' 칸을 고치면 바뀝니다.`
     : catalog.source === 'pasted' ? `직접 넣은 목록 ${catalog.rows.length}개를 쓰고 있습니다. 이 브라우저에만 저장돼 있습니다.`
     : '기본 직무 목록을 쓰고 있습니다.';
 

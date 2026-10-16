@@ -1,7 +1,13 @@
 // Vite 없이 esbuild만으로 '파일 하나짜리 HTML'을 만드는 스크립트
-// 사용: node scripts/build-single.mjs  → dist/ai-job-simulator.html
+// 사용: node scripts/build-single.mjs  → dist/ai-job-simulator.html (직무 목록 칸은 비어 있음)
+//      node scripts/build-single.mjs --list 목록.tsv --out 사내용.html  → 직무 목록을 넣은 사내 배포용 HTML
+//      (사내용 파일은 저장소에 올리지 마세요)
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+
+const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
+const listFile = arg('--list');
+const outFile = arg('--out') ?? 'dist/ai-job-simulator.html';
 
 const result = await build({
   entryPoints: ['src/main.tsx'],
@@ -22,12 +28,27 @@ ${fonts}
 
 mkdirSync('dist', { recursive: true });
 // 1) 브라우저로 바로 여는 완전한 HTML (사내망 배포·메일 첨부용)
-// 같은 폴더에 job-list.js(사내 직무 목록)가 있으면 앱보다 먼저 읽습니다. 없으면 기본 목록으로 동작합니다.
-const jobList = '<script src="job-list.js"></script>';
-writeFileSync('dist/ai-job-simulator.html', `<!doctype html>
+// 맨 위에 '직무 목록' 칸을 둡니다. 메모장으로 열어 이 칸만 고치면 직군→직종→직렬→직무 선택지가 바뀝니다.
+const header = '직군\t직종\t직렬\t직무';
+const rows = listFile
+  ? readFileSync(listFile, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l && !/^직군\s/.test(l))
+  : [];
+// 템플릿 문자열 안에서 깨지지 않도록 역슬래시·백틱·${ 를 무력화
+const esc = (t) => t.replace(/\\/g, '\\\\').replace(/`/g, "'").replace(/\$\{/g, '$ {');
+const listBlock = `<!-- ▼▼▼ 직무 목록: 이 사이만 고치면 됩니다 ▼▼▼
+  · 한 줄에 직무 하나: 직군, 직종, 직렬, 직무 순서 (탭으로 구분 — 엑셀에서 네 칸을 복사해 붙여넣으면 됩니다)
+  · 줄을 추가·수정·삭제한 뒤 저장하고 브라우저에서 다시 열면 반영됩니다.
+  · 목록 안에 백틱(\`) 문자는 쓰지 마세요. 목록이 비어 있으면 기본 직무 목록으로 동작합니다. -->
+<script>window.JOB_LIST = \`
+${[header, ...rows.map(esc)].join('\n')}
+\`;</script>
+<!-- ▲▲▲ 직무 목록 끝 ▲▲▲ -->`;
+mkdirSync('dist', { recursive: true });
+writeFileSync(outFile, `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-${page.replace('<div id="root"></div>', `</head><body><div id="root"></div>\n${jobList}`)}
+${listBlock}
+${page.replace('<div id="root"></div>', '</head><body><div id="root"></div>')}
 </body></html>`);
 // 2) 페이지 본문만 있는 버전 (아티팩트 게시용)
 writeFileSync('dist/artifact.html', page);
-console.log('built', (readFileSync('dist/ai-job-simulator.html').length / 1024).toFixed(0) + 'KB');
+console.log('built', outFile, (readFileSync(outFile).length / 1024).toFixed(0) + 'KB', `직무 ${rows.length}줄`);
