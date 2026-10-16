@@ -2,6 +2,7 @@
 import { ARCHETYPES, ENV, EVENTS, LABELS, REDESIGN, REINVEST } from './engine/config';
 import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
+import { jobLabel } from './jobCatalog';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
 
@@ -16,7 +17,7 @@ export function buildReport(s: AppState, res: Res) {
   return {
     generatedAt: new Date().toLocaleString('ko-KR'),
     note: '가정에 기반한 교육용 추정치입니다.',
-    job: s.profile.job === 'other' ? s.profile.jobOther : LABELS.job[s.profile.job],
+    job: jobLabel(s.profile),
     weeklyHours: s.profile.weeklyHours,
     workEnv: {
       approval: ENV.approval[s.profile.env.approval].title,

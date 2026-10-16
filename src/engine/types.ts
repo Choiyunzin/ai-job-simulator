@@ -58,6 +58,7 @@ export interface Task {
 export interface Profile {
   job: JobId;
   jobOther: string;
+  jobPath: string[];        // 사내 직무 목록에서 고른 경로 [직군, 직종, 직렬, 직무] (목록을 쓰지 않으면 빈 배열)
   weeklyHours: number;      // 주당 근무시간 (기본 40)
   tasks: Task[];
   criteria: Criterion[];    // 최대 2개

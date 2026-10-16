@@ -1,5 +1,6 @@
 import { StepNav } from '../App';
-import { ARCHETYPES, LABELS } from '../engine/config';
+import { ARCHETYPES } from '../engine/config';
+import { jobLabel } from '../jobCatalog';
 import { fmtH } from '../engine/simulate';
 import type { ArchetypeId } from '../engine/types';
 import { CountUp, Meter } from '../components/viz';
@@ -10,7 +11,7 @@ export default function Diagnosis() {
   const { s, d } = useApp();
   const { dx, after } = useResults();
   const A = ARCHETYPES[dx.archetype];
-  const job = s.profile.job === 'other' ? (s.profile.jobOther || '기타') : LABELS.job[s.profile.job];
+  const job = jobLabel(s.profile);
   const currentAi = after.tasks.reduce((x, r) => x + r.before.currentAiHours, 0);
   const startSim = (id?: string) => {
     if (id) d({ type: 'simTask', id });

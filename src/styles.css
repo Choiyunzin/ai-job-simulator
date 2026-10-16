@@ -466,3 +466,13 @@ textarea { resize: vertical; line-height: 1.55; }
   .report-card { border: 1px solid #ccc; background: #fff; color: #111; }
   .report-card * { color: #111 !important; }
 }
+
+/* ── 사내 직무 목록 (4단 선택 + 불러오기) ── */
+.cascade { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.cascade > .ok { grid-column: 1 / -1; }
+.cascade select:disabled { opacity: 0.55; }
+.step-no { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--surface-2); color: var(--blue); font-size: 11px; }
+@media (max-width: 560px) { .cascade { grid-template-columns: 1fr; } }
+.joblist-body { display: flex; flex-direction: column; gap: 10px; }
+.joblist-body .lead-s { font-size: 13.5px; }
+.joblist-body textarea { font-family: var(--font-num); font-size: 13px; }
