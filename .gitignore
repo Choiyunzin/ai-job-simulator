@@ -2,3 +2,6 @@ node_modules
 
 # 사내 직무 목록(보안) — 저장소에 올리지 않음
 job-list.js
+
+# 빌드 부산물(아티팩트 게시용 본문만 있는 버전)
+dist/artifact.html
