@@ -9,8 +9,8 @@ import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
-const TASK_COLORS = ['#6FA8FF', '#9C86FF', '#5FC7B4', '#E0A458', '#E57373'];
-const INVEST_COLORS = ['#B9E769', '#7FE0D0', '#FFD479', '#F7A1C4', '#A0C4FF', '#D7B9FF'];
+const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
+const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#A98BF0'];
 
 export default function Future() {
   const { s, d } = useApp();

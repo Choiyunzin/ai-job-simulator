@@ -6,8 +6,8 @@ import type { EventId } from './engine/types';
 import { useApp } from './state';
 
 export const COLORS = {
-  direct: '#7A8BB0', review: '#E0A458', prompt: '#6FA8FF', manual: '#7A8BB0',
-  aiReview: '#E8B86A', rework: '#E57373', maint: '#9C86FF', extra: '#5FC7B4', overhead: '#C792EA',
+  direct: '#7A8BB0', review: '#E0A458', prompt: '#4F86F7', manual: '#7A8BB0',
+  aiReview: '#E8B86A', rework: '#E57373', maint: '#8A6CF0', extra: '#3FB09C', overhead: '#C792EA',
 };
 
 export function useResults() {

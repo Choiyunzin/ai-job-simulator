@@ -44,7 +44,7 @@ src/
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장
 ├─ useResults.ts        상태 → 계산 결과 (입력이 바뀌면 즉시 재계산)
 ├─ report.ts            JSON / CSV / 텍스트 리포트 생성
-└─ styles.css           디자인 (다크 네이비 + 블루·바이올렛)
+└─ styles.css           디자인 (밝은 화이트 + 블루·바이올렛)
 scripts/build-single.mjs  단일 HTML 빌드 스크립트
 docs/index.html           GitHub Pages 배포본 (dist/ai-job-simulator.html 복사본)
 ```
