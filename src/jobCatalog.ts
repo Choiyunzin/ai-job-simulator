@@ -1,13 +1,11 @@
-// 사내 직무 목록(직군 → 직종 → 직렬 → 직무)을 사용자가 직접 붙여넣어 쓰는 기능
-// 목록은 이 브라우저(localStorage)에만 저장되며, 코드·서버·GitHub에는 들어가지 않습니다.
-import { useCallback, useState } from 'react';
+// 사내 직무 목록(직군 → 직종 → 직렬 → 직무): HTML 맨 위 '직무 목록' 칸에 넣은 목록을 읽어 4단 선택에 씁니다.
+import { useState } from 'react';
 import { LABELS } from './engine/config';
 import type { Profile } from './engine/types';
 
 export const LEVELS = ['직군', '직종', '직렬', '직무'] as const;
 export type JobRow = [string, string, string, string];
 
-const KEY = 'ai-job-simulator:job-list';
 const MAX_ROWS = 3000;
 
 export interface ParseResult { rows: JobRow[]; skipped: number }
@@ -54,49 +52,16 @@ function splitCsv(line: string): string[] {
   return out;
 }
 
-/** 엑셀 CSV는 UTF-8 또는 한글 윈도우 인코딩(CP949)일 수 있어 둘 다 시도합니다. */
-export async function readTextFile(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
-  catch { return new TextDecoder('euc-kr').decode(buf); }
-}
-
 declare global { interface Window { JOB_LIST?: string } }
 
-export type CatalogSource = 'file' | 'pasted' | 'none';
-
-/** HTML 맨 위 '직무 목록' 칸(window.JOB_LIST)에 목록이 있으면 그것을 먼저 씁니다. */
-function fromFile(): JobRow[] {
+/** HTML 맨 위 '직무 목록' 칸(window.JOB_LIST)을 읽습니다. 비어 있으면 기본 직무 목록을 씁니다. */
+function readList(): JobRow[] {
   try { return typeof window.JOB_LIST === 'string' ? parseJobList(window.JOB_LIST).rows : []; } catch { return []; }
 }
 
-function fromStorage(): JobRow[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const v = raw ? JSON.parse(raw) : [];
-    return Array.isArray(v) ? v.filter((r) => Array.isArray(r) && r.length === 4) : [];
-  } catch { return []; }
-}
-
-function initial(): { rows: JobRow[]; source: CatalogSource } {
-  const f = fromFile();
-  if (f.length) return { rows: f, source: 'file' };
-  const st = fromStorage();
-  return st.length ? { rows: st, source: 'pasted' } : { rows: [], source: 'none' };
-}
-
 export function useJobCatalog() {
-  const [cat, setCat] = useState(initial);
-  /** 화면에서 붙여넣은 목록 저장 (빈 배열이면 지우기) */
-  const save = useCallback((next: JobRow[]) => {
-    try {
-      if (next.length) localStorage.setItem(KEY, JSON.stringify(next));
-      else localStorage.removeItem(KEY);
-    } catch { /* 저장이 막힌 브라우저에서는 이번 화면에서만 사용 */ }
-    if (next.length) setCat({ rows: next, source: 'pasted' });
-    else { const f = fromFile(); setCat(f.length ? { rows: f, source: 'file' } : { rows: [], source: 'none' }); }
-  }, []);
-  return { ...cat, save };
+  const [rows] = useState(readList);
+  return { rows };
 }
 
 /** 앞 단계 선택값에 맞는 다음 단계 선택지 (목록에 나온 순서 유지) */

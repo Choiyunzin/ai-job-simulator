@@ -5,7 +5,7 @@ import type {
   AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
 import { useApp } from '../state';
-import { LEVELS, isEduPath, optionsAt, parseJobList, readTextFile, useJobCatalog, type JobRow } from '../jobCatalog';
+import { LEVELS, isEduPath, optionsAt, useJobCatalog } from '../jobCatalog';
 
 const SUBS = ['직무', '업무 정의', 'AI 활용 수준', 'AI 적용 가능성', '성공 기준·걱정', '승인·자료', 'AI 활용 환경', '나의 이야기'];
 const CODES = ['QA', 'QB', 'QC', 'QD', 'QE·F', 'QG', 'QH', 'QI'];
@@ -146,7 +146,6 @@ function QJob({ catalog }: { catalog: Catalog }) {
         </div>
         <small>기본 40시간입니다. 대략적인 추정치여도 괜찮습니다.</small>
       </div>
-      <JobListImporter catalog={catalog} />
     </div>
   );
 }
@@ -444,46 +443,5 @@ function QStory() {
         <small>{n.tips.length}/300</small>
       </div>
     </div>
-  );
-}
-
-/** 사내 직무 목록 불러오기: HTML에 목록이 없을 때 화면에서 직접 붙여넣거나 CSV 파일을 고릅니다. */
-function JobListImporter({ catalog }: { catalog: Catalog }) {
-  const [text, setText] = useState('');
-  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const apply = (raw: string) => {
-    const { rows, skipped } = parseJobList(raw);
-    if (!rows.length) { setMsg({ ok: false, t: '직군·직종·직렬·직무 네 칸이 모두 있는 줄을 찾지 못했습니다. 엑셀에서 네 칸을 함께 복사했는지 확인해 주세요.' }); return; }
-    catalog.save(rows as JobRow[]);
-    setText('');
-    setMsg({ ok: true, t: `${rows.length}개 직무를 불러왔습니다.${skipped ? ` (빈칸·중복 ${skipped}줄 제외)` : ''}` });
-  };
-  const onFile = async (f?: File) => { if (f) apply(await readTextFile(f)); if (fileRef.current) fileRef.current.value = ''; };
-
-  const status = catalog.source === 'file' ? `이 HTML 파일에 들어 있는 목록 ${catalog.rows.length}개를 쓰고 있습니다. 메모장으로 파일 맨 위 '직무 목록' 칸을 고치면 바뀝니다.`
-    : catalog.source === 'pasted' ? `직접 넣은 목록 ${catalog.rows.length}개를 쓰고 있습니다. 이 브라우저에만 저장돼 있습니다.`
-    : '기본 직무 목록을 쓰고 있습니다.';
-
-  return (
-    <details className="basis joblist">
-      <summary>사내 직무 목록 불러오기</summary>
-      <div className="joblist-body">
-        <p className="fine">{status}</p>
-        <p className="lead-s">엑셀에서 <b>직군 · 직종 · 직렬 · 직무</b> 네 칸을 제목 행까지 함께 복사해 아래에 붙여넣으세요. 목록은 이 브라우저에만 저장되며 어디로도 전송되지 않습니다.</p>
-        <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} aria-label="직무 목록 붙여넣기"
-          placeholder={'직군    직종    직렬    직무\n일반직    생산    생산관리    ○○기획'} />
-        <div className="ex-btns">
-          <button className="btn primary tiny" disabled={!text.trim()} onClick={() => apply(text)}>붙여넣은 목록 적용</button>
-          <button className="btn tiny" onClick={() => fileRef.current?.click()}>CSV 파일 고르기</button>
-          <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" hidden onChange={(e) => onFile(e.target.files?.[0])} />
-          {catalog.source === 'pasted' && (
-            <button className="btn danger-ghost tiny" onClick={() => { catalog.save([]); setMsg({ ok: true, t: '직접 넣은 목록을 지웠습니다.' }); }}>직접 넣은 목록 지우기</button>
-          )}
-        </div>
-        {msg && <p className={msg.ok ? 'ok' : 'warn'} role="status">{msg.t}</p>}
-      </div>
-    </details>
   );
 }
