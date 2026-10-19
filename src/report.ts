@@ -3,6 +3,7 @@ import { ARCHETYPES, ENV, EVENTS, LABELS, REDESIGN, REINVEST } from './engine/co
 import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
 import { jobLabel } from './jobCatalog';
+import { savingsSentence } from './components/SavingsBand';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
 
@@ -10,7 +11,7 @@ type Res = ReturnType<typeof useResults>;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export function buildReport(s: AppState, res: Res) {
-  const { after, redesign, dx, contrib } = res;
+  const { after, redesign, dx, contrib, bands } = res;
   const T = redesign.totals;
   const items = REINVEST[s.profile.job === 'edu' ? 'edu' : 'general'];
   const expTask = s.profile.tasks.find((t) => t.id === dx.firstExperiment?.id) ?? s.profile.tasks[0];
@@ -18,7 +19,9 @@ export function buildReport(s: AppState, res: Res) {
     generatedAt: new Date().toLocaleString('ko-KR'),
     note: '가정에 기반한 교육용 추정치입니다.',
     job: jobLabel(s.profile),
-    weeklyHours: s.profile.weeklyHours,
+    hourBasisForDetail: s.profile.weeklyHours,
+    savingsSummary: savingsSentence(bands),
+    savedHoursByBasis: bands.map((b) => ({ weeklyHours: b.base, aiOnly: r2(b.aiSaved), redesign: r2(b.redesignSaved) })),
     workEnv: {
       approval: ENV.approval[s.profile.env.approval].title,
       personalData: ENV.personalData[s.profile.env.personalData].title,
@@ -48,7 +51,7 @@ export function buildReport(s: AppState, res: Res) {
     tasks: redesign.tasks.map((r, i) => {
       const a = after.tasks[i];
       return {
-        name: r.task.name, type: LABELS.type[r.task.type], frequency: LABELS.frequency[r.task.frequency],
+        name: r.task.name, sharePct: r.task.share, type: LABELS.type[r.task.type], frequency: LABELS.frequency[r.task.frequency],
         importance: LABELS.importance[r.task.importance], aiLevel: r.task.aiLevel,
         applicability: LABELS.applicability[r.task.applicability].title,
         beforeHours: r2(r.before.labor), afterAiHours: r2(a.after.labor), redesignHours: r2(r.after.labor),
@@ -84,6 +87,7 @@ export function toCSV(r: Report): string {
     ['재투자 가능 시간', r.totals.reinvestableHours], ['품질 점수(후)', r.totals.qualityAfter], ['위험 점수(후)', r.totals.riskAfter],
   ];
   tl.forEach(([k, v]) => lines.push(`요약,${esc(k)},${v}`));
+  r.savedHoursByBasis.forEach((b) => lines.push(`요약,${esc(`주 ${b.weeklyHours}시간 기준 절감 시간(재설계)`)},${b.redesign}`));
   lines.push(`환경,승인 방식,${esc(r.workEnv.approval)}`);
   lines.push(`환경,개인정보 포함,${esc(r.workEnv.personalData)}`);
   lines.push(`환경,사용 가능한 AI 도구,${esc(r.workEnv.aiTools.join(' / '))}`);
@@ -92,8 +96,8 @@ export function toCSV(r: Report): string {
   if (r.myStory.aiWish) lines.push(`나의 이야기,AI로 덜고 싶은 고민,${esc(r.myStory.aiWish)}`);
   if (r.myStory.tips) lines.push(`나의 이야기,활용 팁,${esc(r.myStory.tips)}`);
   lines.push('');
-  lines.push('업무명,유형,빈도,중요도,AI 활용 단계,적용 가능성,도입 전(h),AI 도입 후(h),재설계 후(h),대체율(%),품질,위험');
-  r.tasks.forEach((t) => lines.push([t.name, t.type, t.frequency, t.importance, t.aiLevel, t.applicability,
+  lines.push('업무명,업무 비율(%),유형,빈도,중요도,AI 활용 단계,적용 가능성,도입 전(h),AI 도입 후(h),재설계 후(h),대체율(%),품질,위험');
+  r.tasks.forEach((t) => lines.push([t.name, t.sharePct, t.type, t.frequency, t.importance, t.aiLevel, t.applicability,
     t.beforeHours, t.afterAiHours, t.redesignHours, t.reductionPct, t.qualityAfter, t.riskAfter].map(esc).join(',')));
   lines.push('');
   lines.push('상황,선택,대응');
@@ -110,7 +114,8 @@ export function toText(r: Report): string {
     `유형: ${r.archetype}`,
     r.summary,
     '',
-    `· AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
+    `· ${r.savingsSummary} (업무 흐름 재설계 반영, 같은 업무량)`,
+    `· [주 ${r.hourBasisForDetail}시간 기준] AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
     `· 순절감 ${r.totals.savedHoursSameVolume}h (${r.totals.savingRatePct}%), 늘어난 요청 처리 ${r.totals.extraVolumeHours}h, 재투자 가능 ${r.totals.reinvestableHours}h`,
     `· 품질 ${r.totals.qualityBefore}→${r.totals.qualityAfter}점, 위험 ${r.totals.riskBefore}→${r.totals.riskAfter}점`,
     `· 잠재력 TOP3: ${r.topTasks.map((t) => t.name).join(', ')}`,

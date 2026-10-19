@@ -306,14 +306,14 @@ export const EVENT_AFFINITY: Record<EventId, {
   copytrap: { concerns: ['lowQuality', 'learningCost'], types: ['idea', 'document'], criteria: ['creative', 'satisfaction', 'quality'], difficulty: ['expertise'] },
 };
 
-/** 교육기획 직무 선택 시 참고용 예시 업무 */
+/** 교육기획 직무 선택 시 참고용 예시 업무 (share: 전체 업무 중 비율 %, hours는 기준 근무시간으로 다시 계산됨) */
 export const EDU_EXAMPLES: Omit<import('./types').Task, 'id'>[] = [
-  { name: '교육 니즈 분석', hours: 4, frequency: 'monthly', type: 'research', importance: 'high', difficulty: 'findInfo', aiLevel: 1, applicability: 'mid' },
-  { name: '교육과정 기획', hours: 8, frequency: 'weekly', type: 'idea', importance: 'high', difficulty: 'expertise', aiLevel: 1, applicability: 'mid' },
-  { name: '교육 콘텐츠 제작', hours: 8, frequency: 'twice', type: 'document', importance: 'mid', difficulty: 'slow', aiLevel: 2, applicability: 'high' },
-  { name: '교육 운영·안내', hours: 10, frequency: 'daily', type: 'communication', importance: 'mid', difficulty: 'coordinate', aiLevel: 0, applicability: 'low' },
-  { name: '교육 만족도 분석', hours: 5, frequency: 'monthly', type: 'data', importance: 'mid', difficulty: 'verify', aiLevel: 1, applicability: 'high' },
-  { name: '결과 보고서 작성', hours: 4, frequency: 'monthly', type: 'document', importance: 'high', difficulty: 'slow', aiLevel: 2, applicability: 'high' },
+  { name: '교육 니즈 분석', share: 10, hours: 4, frequency: 'monthly', type: 'research', importance: 'high', difficulty: 'findInfo', aiLevel: 1, applicability: 'mid' },
+  { name: '교육과정 기획', share: 20, hours: 8, frequency: 'weekly', type: 'idea', importance: 'high', difficulty: 'expertise', aiLevel: 1, applicability: 'mid' },
+  { name: '교육 콘텐츠 제작', share: 20, hours: 8, frequency: 'twice', type: 'document', importance: 'mid', difficulty: 'slow', aiLevel: 2, applicability: 'high' },
+  { name: '교육 운영·안내', share: 25, hours: 10, frequency: 'daily', type: 'communication', importance: 'mid', difficulty: 'coordinate', aiLevel: 0, applicability: 'low' },
+  { name: '교육 만족도 분석', share: 12, hours: 5, frequency: 'monthly', type: 'data', importance: 'mid', difficulty: 'verify', aiLevel: 1, applicability: 'high' },
+  { name: '결과 보고서 작성', share: 10, hours: 4, frequency: 'monthly', type: 'document', importance: 'high', difficulty: 'slow', aiLevel: 2, applicability: 'high' },
 ];
 
 /** 확보한 시간 재투자 항목 (교육 직무 / 그 외 직무) */
@@ -358,3 +358,6 @@ export const ARCHETYPES = {
     growth: '모든 것을 다 검토하기보다 위험도에 따라 검토 깊이를 나누면 시간이 남습니다.',
   },
 } as const;
+
+/** 시간 환산 기준 근무시간: 결과의 절감 시간은 두 기준을 범위로 함께 보여줍니다. */
+export const HOUR_BASES = [40, 52] as const;

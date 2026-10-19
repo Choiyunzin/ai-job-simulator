@@ -6,6 +6,7 @@ import type { ComponentKey, RedesignToggle, TaskResult } from '../engine/types';
 import { CountUp, Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
+import { SavingsBand } from '../components/SavingsBand';
 
 type Unit = 'week' | 'each';
 
@@ -28,7 +29,7 @@ export function afterSegments(r: TaskResult, k = 1): Segment[] {
 
 export default function Simulation() {
   const { s, d } = useApp();
-  const { after, redesign, dx } = useResults();
+  const { after, redesign, dx, bands } = useResults();
   const [unit, setUnit] = useState<Unit>('week');
   const [scope, setScope] = useState<'task' | 'all'>('task');
 
@@ -102,6 +103,7 @@ export default function Simulation() {
           <Kpi label="오류 위험 점수" value={scope === 'task' ? rr.after.risk : redesign.totals.afterRisk} decimals={0}
             delta={(scope === 'task' ? rr.after.risk - ra.before.risk : redesign.totals.afterRisk - redesign.totals.beforeRisk)} goodWhen="down" />
         </div>
+        {scope === 'all' && <SavingsBand bands={bands} title="전체 업무 기준 AI로 절감 가능한 시간" compact />}
         {sumSeg(rows[0].segments) > 0 && (
           <p className="insight">
             {savingAfter < 10

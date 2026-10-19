@@ -8,6 +8,7 @@ import { Composition, CountUp, Delta, Donut, type Segment } from '../components/
 import { buildReport, toCSV, toText } from '../report';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
+import { SavingsBand, rangeOf } from '../components/SavingsBand';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
 const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
@@ -16,7 +17,7 @@ const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#
 export default function Future() {
   const { s, d } = useApp();
   const res = useResults();
-  const { after, redesign, dx, contrib } = res;
+  const { after, redesign, dx, contrib, bands } = res;
   const T = redesign.totals;
   const free = Math.max(0, T.freeTime);
   const items = REINVEST[s.profile.job === 'edu' ? 'edu' : 'general'];
@@ -49,11 +50,13 @@ export default function Future() {
       <p className="eyebrow">STEP 6 · AI와 함께 일하는 미래의 나</p>
       <h1 className="h-screen">AI와 함께 일하는 미래의 나</h1>
 
+      <SavingsBand bands={bands} />
+
       <div className="dash">
         <Tile label="AI 도입 전" value={T.beforeLabor} note="주당 업무시간" />
         <Tile label="AI 도입 후" value={after.totals.afterLabor} note={`같은 업무량 기준 · 요청 증가 시 +${fmtH(after.totals.extraVolumeLabor)}`} />
         <Tile label="업무 흐름 재설계 후" value={T.afterLabor + T.overhead} note={`같은 업무량 기준 · 요청 증가 시 +${fmtH(T.extraVolumeLabor)}`} accent />
-        <Tile label="순절감 시간" value={T.savedSameVolume} note="같은 업무량 기준" />
+        <Tile label="순절감 시간" value={T.savedSameVolume} note={`같은 업무량 · 주 ${s.profile.weeklyHours}시간 기준`} />
         <Tile label="절감률" value={T.savingRate} suffix="%" note="(기존 − 변경 후) ÷ 기존 × 100" />
         <div className="tile">
           <span>예상 품질 변화</span>
@@ -132,8 +135,9 @@ export default function Future() {
             <ol>{dx.bottlenecks.map((b) => <li key={b.key}>{b.label} <span className="num">(주 {fmtH(b.hours)})</span></li>)}</ol>
           </div>
           <div>
-            <h4>시뮬레이션상 절감 가능 시간</h4>
-            <p className="big num">{fmtH(T.savedSameVolume)}<small> / 주 ({T.savingRate.toFixed(1)}%)</small></p>
+            <h4>AI로 절감 가능한 시간</h4>
+            <p className="big num">주 {rangeOf(bands, (b) => b.redesignSaved)}<small>시간 ({T.savingRate.toFixed(1)}%)</small></p>
+            <small className="num">{bands.map((b) => `주 ${b.base}시간 기준 ${fmtH(b.redesignSaved)}`).join(' · ')}</small>
           </div>
           <div>
             <h4>가장 효과적이었던 재설계 선택 <small>(성공 기준 가중)</small></h4>

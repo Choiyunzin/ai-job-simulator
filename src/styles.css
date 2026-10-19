@@ -473,3 +473,20 @@ textarea { resize: vertical; line-height: 1.55; }
 .cascade select:disabled { opacity: 0.55; }
 .step-no { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--surface-2); color: var(--blue); font-size: 11px; }
 @media (max-width: 560px) { .cascade { grid-template-columns: 1fr; } }
+
+/* ── AI 절감 시간 범위 (주 40시간 ~ 52시간 기준) ── */
+.band { display: grid; grid-template-columns: auto 1fr; gap: 6px 24px; align-items: center; padding: 18px 20px; border-radius: var(--r); border: 1px solid rgba(122, 82, 240, 0.35); background: linear-gradient(135deg, rgba(47, 107, 255, 0.07), rgba(122, 82, 240, 0.09)), var(--surface); }
+.band-title { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--violet); }
+.band-val { font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 40px); font-weight: 700; color: var(--fg); white-space: nowrap; line-height: 1.1; }
+.band-val small { font-size: 0.5em; font-weight: 600; margin-left: 4px; color: var(--fg-dim); }
+.band-bases { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.band-bases li { display: flex; flex-direction: column; padding: 8px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); min-width: 130px; }
+.band-bases li > span { font-size: 12px; color: var(--fg-dim); }
+.band-bases li > b { font-size: 18px; font-family: var(--font-num); }
+.band-bases li > small { font-size: 11px; color: var(--fg-faint); }
+.band-note { grid-column: 1 / -1; font-size: 12px; color: var(--fg-faint); }
+.band.compact { padding: 14px 16px; }
+.band.compact .band-val { font-size: clamp(22px, 3.4vw, 30px); }
+.band.neg { border-color: rgba(217, 58, 76, 0.4); }
+.band.neg .band-title { color: var(--bad); }
+@media (max-width: 640px) { .band { grid-template-columns: 1fr; } .band-bases { justify-content: flex-start; } .band-bases li { flex: 1 1 120px; min-width: 0; } }

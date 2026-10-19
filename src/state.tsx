@@ -23,7 +23,7 @@ const STORAGE_KEY = 'ai-job-simulator:v2';
 export const newId = () => Math.random().toString(36).slice(2, 9);
 
 export const blankTask = (): Task => ({
-  id: newId(), name: '', hours: 4, frequency: 'weekly', type: 'document',
+  id: newId(), name: '', share: 10, hours: 4, frequency: 'weekly', type: 'document',
   importance: 'mid', difficulty: 'slow', aiLevel: 0, applicability: 'unknown',
 });
 
@@ -62,7 +62,18 @@ type Action =
   | { type: 'reinvest'; key: string; v: number }
   | { type: 'reset' };
 
+/** 업무시간 = 기준 근무시간 × 비율. 비율이나 기준이 바뀔 때마다 다시 계산합니다. */
+export const hoursOf = (share: number, base: number) => Math.round(Math.max(0, share || 0) * base) / 100;
+const withHours = (p: Profile): Profile => ({
+  ...p, tasks: p.tasks.map((t) => ({ ...t, hours: hoursOf(t.share, p.weeklyHours) })),
+});
+
 function reducer(s: AppState, a: Action): AppState {
+  const next = baseReducer(s, a);
+  return next.profile === s.profile ? next : { ...next, profile: withHours(next.profile) };
+}
+
+function baseReducer(s: AppState, a: Action): AppState {
   switch (a.type) {
     case 'go': return { ...s, step: a.step, sub: a.sub ?? s.sub };
     case 'sub': return { ...s, sub: a.sub };
@@ -131,7 +142,7 @@ function load(): AppState {
     if (raw) {
       const saved = JSON.parse(raw);
       const base = initialState();
-      return {
+      const loaded: AppState = {
         ...base, ...saved,
         profile: {
           ...base.profile, ...saved.profile,
@@ -139,6 +150,15 @@ function load(): AppState {
           notes: { ...base.profile.notes, ...(saved.profile?.notes ?? {}) },
         },
       };
+      // 예전 버전(시간 직접 입력)에서 저장된 업무는 비율로 바꿔서 불러옵니다.
+      const wh = loaded.profile.weeklyHours || 40;
+      loaded.profile = withHours({
+        ...loaded.profile,
+        tasks: (loaded.profile.tasks ?? []).map((t: Task) => ({
+          ...t, share: typeof t.share === 'number' ? t.share : Math.round(((t.hours || 0) / wh) * 1000) / 10,
+        })),
+      });
+      return loaded;
     }
   } catch { /* 저장소를 쓸 수 없는 환경 */ }
   return initialState();

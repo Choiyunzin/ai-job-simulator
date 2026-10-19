@@ -49,11 +49,12 @@ src/
 │  └─ diagnose.ts       유형 판정, TOP3, 병목, 상황 카드 추천, 주의사항, 다음 실험
 ├─ steps/               6단계 화면
 │  ├─ Intro.tsx         STEP 1 인트로
-│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A~Q.I, 8개 질문 화면)
+│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A~Q.I, 8개 질문 화면 · 업무는 비율(%)로 입력)
 │  ├─ Diagnosis.tsx     STEP 3 AI 업무 유형 진단
 │  ├─ Simulation.tsx    STEP 4 전후 시뮬레이션 (흐름 애니메이션, 3개 결과 비교, 시간 조정)
 │  ├─ Events.tsx        STEP 5 상황 대응 게임 (파일명은 Events 그대로)
 │  └─ Future.tsx        STEP 6 미래의 나 (대시보드, 재투자, 리포트, 내보내기)
+├─ components/SavingsBand.tsx  'AI로 주 X~Y시간 절감' 범위 표시
 ├─ components/viz.tsx   카운트업, 누적 막대, 도넛, 구성 막대, 점수 막대
 ├─ jobCatalog.ts        사내 직무 목록 읽기·4단 선택
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장
@@ -65,6 +66,10 @@ docs/index.html           GitHub Pages 배포본 (dist/ai-job-simulator.html 복
 ```
 
 ## 4. 핵심 계산 로직 (`engine/simulate.ts`)
+
+업무는 **전체 업무 중 비율(%)**로 입력하고, 주당 시간은 `h = 기준 근무시간 × 비율`로 환산합니다(합계는 100% 이하, 나머지는 회의·기타).
+절감 시간은 **주 40시간·52시간 두 기준으로 각각 계산해 'AI로 주 X ~ Y시간 절감 가능'처럼 범위로** 보여줍니다. 도구 유지관리·재설계 준비 같은 고정 시간이 있어 52시간 값이 40시간 값의 정확히 1.3배가 되지는 않습니다.
+상세 그래프는 Q.A에서 고른 기준(40 또는 52시간)으로 그립니다. 기준값은 `config.ts`의 `HOUR_BASES`에서 바꿀 수 있습니다.
 
 업무 하나의 주당 시간 `h`를 기준으로 계산합니다. 모든 값은 **주당 시간**이며, 화면에서 '건당'을 고르면 주당 발생 건수로 나눠 보여줍니다.
 
@@ -143,6 +148,7 @@ docs/index.html           GitHub Pages 배포본 (dist/ai-job-simulator.html 복
 | `CRITERIA_WEIGHTS` | 성공 기준별 '가장 효과적인 선택' 가중치 |
 | `EDU_EXAMPLES` | 교육기획 예시 업무 |
 | `REINVEST` | 확보 시간 재투자 항목 |
+| `HOUR_BASES` | 시간 환산 기준 근무시간 (기본 40·52시간) |
 | `ARCHETYPES` | 네 유형의 이름·아이콘·설명 |
 | `LABELS` | 화면의 모든 선택지 문구 |
 

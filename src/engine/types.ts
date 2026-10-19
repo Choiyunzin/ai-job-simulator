@@ -46,7 +46,8 @@ export interface WorkEnv {
 export interface Task {
   id: string;
   name: string;
-  hours: number;            // 주당 투입 시간(현재 상태, 노동시간)
+  share: number;            // 전체 업무 중 비율(%) — 사용자가 입력
+  hours: number;            // 주당 투입 시간 = 기준 근무시간 × 비율 (자동 계산)
   frequency: Frequency;
   type: TaskType;
   importance: Importance;
@@ -59,7 +60,7 @@ export interface Profile {
   job: JobId;
   jobOther: string;
   jobPath: string[];        // 사내 직무 목록에서 고른 경로 [직군, 직종, 직렬, 직무] (목록을 쓰지 않으면 빈 배열)
-  weeklyHours: number;      // 주당 근무시간 (기본 40)
+  weeklyHours: number;      // 시간 환산 기준 근무시간 (40 또는 52, 상세 그래프 기준)
   tasks: Task[];
   criteria: Criterion[];    // 최대 2개
   concerns: Concern[];

@@ -6,10 +6,13 @@ import type { ArchetypeId } from '../engine/types';
 import { CountUp, Meter } from '../components/viz';
 import { useApp } from '../state';
 import { useResults } from '../useResults';
+import { SavingsBand } from '../components/SavingsBand';
+import { HOUR_BASES } from '../engine/config';
 
 export default function Diagnosis() {
   const { s, d } = useApp();
-  const { dx, after } = useResults();
+  const { dx, after, bands } = useResults();
+  const shareTotal = s.profile.tasks.reduce((x, t) => x + (t.share || 0), 0);
   const A = ARCHETYPES[dx.archetype];
   const job = jobLabel(s.profile);
   const currentAi = after.tasks.reduce((x, r) => x + r.before.currentAiHours, 0);
@@ -36,9 +39,11 @@ export default function Diagnosis() {
         <div className="card soft"><h3>개선 기회</h3><p>{A.growth}</p></div>
       </div>
 
+      <SavingsBand bands={bands} />
+
       <div className="stats">
-        <div className="stat"><span>총 주당 업무시간</span><b><CountUp value={dx.totalHours} />시간</b>
-          <small>근무시간 {s.profile.weeklyHours}시간 중</small></div>
+        <div className="stat"><span>입력한 업무 비율</span><b><CountUp value={shareTotal} decimals={0} />%</b>
+          <small>{HOUR_BASES.map((h) => `주 ${h}h 기준 ${(Math.round(shareTotal * h) / 100).toFixed(1)}h`).join(' · ')}</small></div>
         <div className="stat"><span>평균 AI 활용 수준</span><b><CountUp value={dx.avgLevel} /> / 4</b>
           <small>업무시간 가중 평균</small></div>
         <div className="stat"><span>현재 AI 활용 시간(추정)</span><b><CountUp value={currentAi} />시간</b>
