@@ -474,19 +474,28 @@ textarea { resize: vertical; line-height: 1.55; }
 .step-no { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--surface-2); color: var(--blue); font-size: 11px; }
 @media (max-width: 560px) { .cascade { grid-template-columns: 1fr; } }
 
-/* ── AI 절감 시간 범위 (주 40시간 ~ 52시간 기준) ── */
-.band { display: grid; grid-template-columns: auto 1fr; gap: 6px 24px; align-items: center; padding: 18px 20px; border-radius: var(--r); border: 1px solid rgba(122, 82, 240, 0.35); background: linear-gradient(135deg, rgba(47, 107, 255, 0.07), rgba(122, 82, 240, 0.09)), var(--surface); }
-.band-title { grid-column: 1 / -1; font-size: 13px; font-weight: 600; color: var(--violet); }
-.band-val { font-family: var(--font-display); font-size: clamp(28px, 4.5vw, 40px); font-weight: 700; color: var(--fg); white-space: nowrap; line-height: 1.1; }
-.band-val small { font-size: 0.5em; font-weight: 600; margin-left: 4px; color: var(--fg-dim); }
-.band-bases { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-.band-bases li { display: flex; flex-direction: column; padding: 8px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); min-width: 130px; }
-.band-bases li > span { font-size: 12px; color: var(--fg-dim); }
-.band-bases li > b { font-size: 18px; font-family: var(--font-num); }
-.band-bases li > small { font-size: 11px; color: var(--fg-faint); }
+/* ── 미래의 나: 주당 근무시간 직접 시뮬레이션 ── */
+.band { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px 28px; align-items: center; padding: 20px 22px; border-radius: var(--r); border: 1px solid rgba(122, 82, 240, 0.35); background: linear-gradient(135deg, rgba(47, 107, 255, 0.07), rgba(122, 82, 240, 0.09)), var(--surface); }
+.band-title { font-size: 12.5px; font-weight: 600; color: var(--violet); letter-spacing: 0.02em; }
+.whatif-q, .whatif-a { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.whatif-q h3 { font-family: var(--font-display); font-size: clamp(20px, 3vw, 26px); font-weight: 600; }
+.whatif-q h3 b { color: var(--blue); font-size: 1.15em; }
+.whatif-ctl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.whatif-ctl .seg { flex: none; }
+.whatif-ctl input[type='range'] { flex: 1 1 140px; }
+.whatif-a { padding: 14px 18px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.band-val { font-family: var(--font-display); font-size: clamp(30px, 5vw, 44px); font-weight: 700; color: var(--fg); white-space: nowrap; line-height: 1.1; }
+.band-val > span:first-child { font-size: 0.55em; font-weight: 600; color: var(--fg-dim); margin-right: 4px; }
+.band-val small { font-size: 0.45em; font-weight: 600; margin-left: 4px; color: var(--fg-dim); }
+.whatif-a > small { font-size: 12px; color: var(--fg-dim); }
+.band-bases { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.band-bases li { flex: 1 1 180px; }
+.band-bases button { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line); text-align: left; }
+.band-bases button span { font-size: 13px; color: var(--fg-dim); }
+.band-bases button b { font-size: 15px; font-family: var(--font-num); }
+.band-bases li.on button { border-color: var(--blue); background: rgba(47, 107, 255, 0.08); }
+.band-bases li.on button span { color: var(--fg); font-weight: 600; }
 .band-note { grid-column: 1 / -1; font-size: 12px; color: var(--fg-faint); }
-.band.compact { padding: 14px 16px; }
-.band.compact .band-val { font-size: clamp(22px, 3.4vw, 30px); }
 .band.neg { border-color: rgba(217, 58, 76, 0.4); }
-.band.neg .band-title { color: var(--bad); }
-@media (max-width: 640px) { .band { grid-template-columns: 1fr; } .band-bases { justify-content: flex-start; } .band-bases li { flex: 1 1 120px; min-width: 0; } }
+.band.neg .whatif-a .band-title { color: var(--bad); }
+@media (max-width: 720px) { .band { grid-template-columns: 1fr; } }

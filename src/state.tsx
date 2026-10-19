@@ -77,7 +77,18 @@ function baseReducer(s: AppState, a: Action): AppState {
   switch (a.type) {
     case 'go': return { ...s, step: a.step, sub: a.sub ?? s.sub };
     case 'sub': return { ...s, sub: a.sub };
-    case 'profile': return { ...s, profile: { ...s.profile, ...a.patch } };
+    case 'profile': {
+      const profile = { ...s.profile, ...a.patch };
+      const k = profile.weeklyHours / (s.profile.weeklyHours || 40);
+      if (!a.patch.weeklyHours || !Number.isFinite(k) || k === 1) return { ...s, profile };
+      const scale = <T extends Record<string, number | undefined>>(o: T) =>
+        Object.fromEntries(Object.entries(o).map(([key, v]) => [key, typeof v === 'number' ? Math.round(v * k * 100) / 100 : v])) as T;
+      return {
+        ...s, profile,
+        overrides: Object.fromEntries(Object.entries(s.overrides).map(([id, o]) => [id, scale(o ?? {})])),
+        reinvest: scale(s.reinvest),
+      };
+    }
     case 'task': return {
       ...s, profile: { ...s.profile, tasks: s.profile.tasks.map((t) => (t.id === a.id ? { ...t, ...a.patch } : t)) },
     };

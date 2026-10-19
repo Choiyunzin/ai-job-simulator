@@ -3,7 +3,7 @@ import { ARCHETYPES, ENV, EVENTS, LABELS, REDESIGN, REINVEST } from './engine/co
 import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
 import { jobLabel } from './jobCatalog';
-import { savingsSentence } from './components/SavingsBand';
+import { savingsSentence } from './components/WorkweekSim';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
 
@@ -19,7 +19,7 @@ export function buildReport(s: AppState, res: Res) {
     generatedAt: new Date().toLocaleString('ko-KR'),
     note: '가정에 기반한 교육용 추정치입니다.',
     job: jobLabel(s.profile),
-    hourBasisForDetail: s.profile.weeklyHours,
+    weeklyHours: s.profile.weeklyHours,
     savingsSummary: savingsSentence(bands),
     savedHoursByBasis: bands.map((b) => ({ weeklyHours: b.base, aiOnly: r2(b.aiSaved), redesign: r2(b.redesignSaved) })),
     workEnv: {
@@ -115,7 +115,7 @@ export function toText(r: Report): string {
     r.summary,
     '',
     `· ${r.savingsSummary} (업무 흐름 재설계 반영, 같은 업무량)`,
-    `· [주 ${r.hourBasisForDetail}시간 기준] AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
+    `· [주 ${r.weeklyHours}시간 근무 기준] AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
     `· 순절감 ${r.totals.savedHoursSameVolume}h (${r.totals.savingRatePct}%), 늘어난 요청 처리 ${r.totals.extraVolumeHours}h, 재투자 가능 ${r.totals.reinvestableHours}h`,
     `· 품질 ${r.totals.qualityBefore}→${r.totals.qualityAfter}점, 위험 ${r.totals.riskBefore}→${r.totals.riskAfter}점`,
     `· 잠재력 TOP3: ${r.topTasks.map((t) => t.name).join(', ')}`,

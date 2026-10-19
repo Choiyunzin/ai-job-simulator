@@ -6,7 +6,6 @@ import type { ComponentKey, RedesignToggle, TaskResult } from '../engine/types';
 import { CountUp, Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
-import { SavingsBand } from '../components/SavingsBand';
 
 type Unit = 'week' | 'each';
 
@@ -29,7 +28,7 @@ export function afterSegments(r: TaskResult, k = 1): Segment[] {
 
 export default function Simulation() {
   const { s, d } = useApp();
-  const { after, redesign, dx, bands } = useResults();
+  const { after, redesign, dx } = useResults();
   const [unit, setUnit] = useState<Unit>('week');
   const [scope, setScope] = useState<'task' | 'all'>('task');
 
@@ -67,6 +66,7 @@ export default function Simulation() {
     <section className="sim">
       <p className="eyebrow">STEP 4 · AI 도입 전후 생산성 시뮬레이션</p>
       <h1 className="h-screen">AI를 도입하면 내 업무는 얼마나 달라질까?</h1>
+      <p className="fine">시간은 업무 비율 × 주 {s.profile.weeklyHours}시간 근무로 환산했습니다. 근무시간은 마지막 '미래의 나'에서 바꿔 볼 수 있어요.</p>
 
       <div className="sim-pick">
         <label htmlFor="simtask">시뮬레이션할 업무</label>
@@ -103,7 +103,6 @@ export default function Simulation() {
           <Kpi label="오류 위험 점수" value={scope === 'task' ? rr.after.risk : redesign.totals.afterRisk} decimals={0}
             delta={(scope === 'task' ? rr.after.risk - ra.before.risk : redesign.totals.afterRisk - redesign.totals.beforeRisk)} goodWhen="down" />
         </div>
-        {scope === 'all' && <SavingsBand bands={bands} title="전체 업무 기준 AI로 절감 가능한 시간" compact />}
         {sumSeg(rows[0].segments) > 0 && (
           <p className="insight">
             {savingAfter < 10

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { EDU_EXAMPLES, ENV, HOUR_BASES, LABELS, TYPE_PROFILE } from '../engine/config';
+import { EDU_EXAMPLES, ENV, LABELS, TYPE_PROFILE } from '../engine/config';
 import type {
   AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
-import { hoursOf, useApp } from '../state';
+import { useApp } from '../state';
 import { LEVELS, isEduPath, optionsAt, useJobCatalog } from '../jobCatalog';
 
 const SUBS = ['직무', '업무 정의', 'AI 활용 수준', 'AI 적용 가능성', '성공 기준·걱정', '승인·자료', 'AI 활용 환경', '나의 이야기'];
@@ -137,13 +137,6 @@ function QJob({ catalog }: { catalog: Catalog }) {
           )}
         </>
       )}
-      <div className="field">
-        <span className="flabel">시간 환산 기준 <small>업무 시간 = 기준 근무시간 × 업무 비율</small></span>
-        <Seg name="시간 환산 기준" value={String(p.weeklyHours)}
-          onChange={(v) => d({ type: 'profile', patch: { weeklyHours: Number(v) } })}
-          options={HOUR_BASES.map((h) => ({ v: String(h), l: `주 ${h}시간` }))} />
-        <small>업무는 다음 질문에서 시간 대신 <b>전체 업무 중 비율(%)</b>로 입력합니다. 절감 시간은 주 {HOUR_BASES.join('시간 · ')}시간 기준을 함께 보여주고, 여기서 고른 기준은 상세 그래프에 씁니다.</small>
-      </div>
     </div>
   );
 }
@@ -183,8 +176,7 @@ function QTasks() {
         <div className="hm-track"><span style={{ width: `${Math.min(100, total)}%` }} /></div>
         {over
           ? <p className="warn">⚠ 합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄여 주세요.</p>
-          : <small>비율은 추정치여도 괜찮습니다. 나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다.
-            {' '}(주 {HOUR_BASES.map((h) => `${h}시간 기준 ${fmtHr(hoursOf(total, h))}`).join(' · ')})</small>}
+          : <small>비율은 추정치여도 괜찮습니다. 나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다. 시간 환산은 마지막 단계에서 근무시간을 바꿔 가며 해볼 수 있어요.</small>}
       </div>
 
       {s.profile.job === 'edu' && examples.length > 0 && tasks.length < 5 && (
@@ -208,7 +200,7 @@ function QTasks() {
               <button className="task-sum" onClick={() => setOpen(isOpen ? null : t.id)} aria-expanded={isOpen}>
                 <span className="tnum num">{i + 1}</span>
                 <span className="tname">{t.name || '새 업무'}</span>
-                <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)} · 주 {fmtHr(t.hours || 0)}</span>
+                <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)}</span>
                 <span className="caret">{isOpen ? '▴' : '▾'}</span>
               </button>
               {err && <p className="err-msg">{err}</p>}
@@ -243,7 +235,6 @@ function TaskEditor({ t, onRemove }: { t: Task; onRemove: () => void }) {
           <input type="number" className="num-in" min={0} max={100} step={0.5} value={t.share} aria-label="업무 비율(%) 숫자 입력"
             onChange={(e) => set({ share: Number(e.target.value) })} />
         </div>
-        <small className="num">≈ {HOUR_BASES.map((h) => `주 ${h}시간 기준 ${fmtHr(hoursOf(t.share, h))}`).join(' · ')}</small>
       </div>
       <div className="field">
         <span className="flabel">업무 빈도</span>
@@ -448,4 +439,3 @@ function QStory() {
 }
 
 const fmtPct = (v: number) => `${Math.round(v * 10) / 10}%`;
-const fmtHr = (v: number) => `${Math.round(v * 10) / 10}시간`;
