@@ -27,7 +27,9 @@ node scripts/build-single.mjs --list 목록.tsv --out ai-job-simulator-사내.ht
 목록 칸이 비어 있으면 기본 직무 목록으로 동작합니다.
 
 **역할 진단(Q.R)**: 직무 목록 아래 '역할 목록' 칸에 `직무<탭>역할`을 한 줄씩 넣으면, 고른 직무(없으면 직렬)의 역할을 5점 척도로 체크합니다. 직무 칸을 `리더`로 적으면 팀장·실장용 리더 역할을 바꿀 수 있습니다. 비어 있으면 교육 직무는 기본 교육기획 역할 5개, 팀장·실장은 기본 리더 역할 6개를 씁니다. 체크한 역할은 Q.B에서 업무로 불러올 수 있고, 리포트에 강점(4~5점)·보완 필요(1~2점)로 정리됩니다.
-사내용 파일 만들기: `node scripts/build-single.mjs --list 목록.tsv --roles 역할.tsv --out ai-job-simulator-사내.html`
+**표준 Task·글로벌 연구 기준 진단(v2)**: HTML 맨 위 세 번째 칸 '표준 Task 목록'에 직무별 표준 업무를 탭 구분 13칸(직무, Task ID, Task 문장, 업무 유형, McKinsey 활동 유형, O*NET 직업 코드, O*NET Task/DWA, 대응 수준, 노출 등급 E0/E1/E2, 채점 근거, 채점 방식, Anthropic 자동화형 비중, 기준일)으로 넣으면, Q.B에서 표준 업무를 고를 수 있고 STEP 3에 연구 기준 진단 카드(노출도·사내 실현 가능·활용도·역량 갭·인프라 갭·4분면)가 나옵니다. 양식은 `templates/표준Task_예시_교육기획.tsv`(예시, 채점 검토 전). 연구 근거값·초기 가정값은 `src/engine/config.ts` 하단(v2)에서 관리합니다.
+
+사내용 파일 만들기: `node scripts/build-single.mjs --list 목록.tsv --roles 역할.tsv --tasks 표준Task.tsv --out ai-job-simulator-사내.html`
 고른 직무 경로에 '교육'이 들어가면 교육 직무용 예시 업무와 재투자 항목이 나옵니다.
 
 ## 2. 개발 환경에서 실행
@@ -61,6 +63,9 @@ src/
 ├─ components/viz.tsx   카운트업, 누적 막대, 도넛, 구성 막대, 점수 막대
 ├─ jobCatalog.ts        사내 직무 목록 읽기·4단 선택, 직급·직책 표시
 ├─ roleCatalog.ts       역할 목록 읽기·역할 진단(Q.R)
+├─ taskCatalog.ts       표준 Task 목록 읽기(F-21)
+├─ engine/research.ts   글로벌 연구 기준 진단 계산(F-22)
+├─ components/ResearchCard.tsx  STEP 3 연구 기준 진단 카드
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장
 ├─ useResults.ts        상태 → 계산 결과 (입력이 바뀌면 즉시 재계산)
 ├─ report.ts            JSON / CSV / 텍스트 리포트 생성

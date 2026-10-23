@@ -146,7 +146,7 @@ export function researchDiagnosis(p: Profile, scenario: ExposureScenario = 'beta
     ? `지금 도구로 더 쓸 수 있는 여지가 ${pct(skillGap)} 있어요. 이미 AI에 맡기는 편이니, 결과 검증과 함께 다듬는 습관으로 품질을 지켜 보세요.`
     : `지금 도구로 더 쓸 수 있는 여지가 ${pct(skillGap)} 있어요. 반복 업무를 AI에 맡기는 법(지시 작성, 업무 위임)을 실습해 보세요.`;
   else recommendation = '연구 기준으로 볼 때 지금 도구로 가능한 만큼 AI를 쓰고 있어요. 활용 사례를 팀과 나눠 보세요.';
-  if (frontier.length) recommendation += ` 또한 '${frontier.map((r) => r.name).join("', '")}'은 사람 판단이 필요한 업무라 결과 검증 체크리스트를 꼭 함께 쓰세요.`;
+  if (frontier.length) recommendation += ` 사람 판단이 필요한 업무에도 AI를 쓰고 있어요(${frontier.map((r) => `'${r.name}'`).join(', ')}). 이 업무는 결과 검증 체크리스트를 꼭 함께 쓰세요.`;
 
   return {
     scenario, inputShare: total === 1 && tasks.length === 0 ? 0 : total,
@@ -164,6 +164,11 @@ export const CONFIDENCE_LABEL = { high: '높음', mid: '보통', low: '낮음(�
 /** 결과 한 문장 (예: "연구 기준으로는 업무의 52%가 …") */
 export function researchSentence(r: ResearchResult): string {
   return `연구 기준으로는 업무의 ${pct(r.exposure)}가 AI로 단축 가능한데, 지금 회사 도구로 가능한 것은 ${pct(r.feasibleExposure)}, 실제 활용은 ${pct(r.usage)}입니다.`
-    + (r.skillGap > 0.005 || r.infraGap > 0.005
-      ? ` 차이 중 ${Math.round(r.skillGap * 100)}%p는 교육으로, ${Math.round(r.infraGap * 100)}%p는 도구·권한 개선으로 줄일 수 있습니다.` : '');
+    + (() => {
+      const parts = [
+        r.skillGap >= 0.005 ? `${Math.round(r.skillGap * 100)}%p는 교육으로` : '',
+        r.infraGap >= 0.005 ? `${Math.round(r.infraGap * 100)}%p는 도구·권한 개선으로` : '',
+      ].filter(Boolean);
+      return parts.length ? ` 차이 중 ${parts.join(', ')} 줄일 수 있습니다.` : '';
+    })();
 }
