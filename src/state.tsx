@@ -30,7 +30,7 @@ export const blankTask = (): Task => ({
 export const initialState = (): AppState => ({
   step: 0, sub: 0,
   profile: {
-    job: 'edu', jobOther: '', jobPath: [], weeklyHours: 40, tasks: [], criteria: [], concerns: [],
+    job: 'edu', jobOther: '', jobPath: [], career: { rank: '', position: '', payGrade: '', years: null }, weeklyHours: 40, tasks: [], criteria: [], concerns: [],
     env: { approval: 'one', personalData: 'some', culture: 'solo', tools: [], learning: 'mid' },
     notes: { pain: '', tips: '' },
   },
@@ -159,6 +159,7 @@ function load(): AppState {
           ...base.profile, ...saved.profile,
           env: { ...base.profile.env, ...(saved.profile?.env ?? {}) },
           notes: { ...base.profile.notes, ...(saved.profile?.notes ?? {}) },
+          career: { ...base.profile.career, ...(saved.profile?.career ?? {}) },
         },
       };
       // 예전 버전(시간 직접 입력)에서 저장된 업무는 비율로 바꿔서 불러옵니다.

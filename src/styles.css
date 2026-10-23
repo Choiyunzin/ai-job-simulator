@@ -499,3 +499,5 @@ textarea { resize: vertical; line-height: 1.55; }
 .band.neg { border-color: rgba(217, 58, 76, 0.4); }
 .band.neg .whatif-a .band-title { color: var(--bad); }
 @media (max-width: 720px) { .band { grid-template-columns: 1fr; } }
+.career { display: flex; flex-direction: column; gap: 12px; }
+.career .divider { margin-block: 2px; }

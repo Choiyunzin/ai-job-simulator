@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StepNav } from '../App';
 import { ARCHETYPES, REINVEST } from '../engine/config';
-import { jobLabel } from '../jobCatalog';
+import { careerLabel, jobLabel } from '../jobCatalog';
 import { cautions, nextExperiment } from '../engine/diagnose';
 import { fmtH } from '../engine/simulate';
 import { Composition, CountUp, Delta, Donut, type Segment } from '../components/viz';
@@ -121,7 +121,7 @@ export default function Future() {
         <div className="rc-head">
           <span className="rc-icon" aria-hidden="true">{A.icon}</span>
           <div>
-            <small>나의 AI 업무혁신 리포트 · {jobLabel(s.profile)}</small>
+            <small>나의 AI 업무혁신 리포트 · {jobLabel(s.profile)}{careerLabel(s.profile) && ` · ${careerLabel(s.profile)}`}</small>
             <h2>{A.name}</h2>
             <p>{dx.sentence}</p>
           </div>

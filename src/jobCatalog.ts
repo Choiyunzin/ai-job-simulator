@@ -81,3 +81,13 @@ export function jobLabel(p: Profile): string {
 
 /** 목록에서 고른 직무에 '교육'이 들어가면 교육 직무용 예시·재투자 항목을 씁니다. */
 export const isEduPath = (path: string[]) => path.some((v) => v.includes('교육'));
+
+/** 직급 · 직책 · Pay Grade · 연차 (고른 것만, 직책 '없음'은 생략) */
+export function careerLabel(p: Profile): string {
+  const c = p.career;
+  if (!c) return '';
+  return [c.rank, c.position && !c.position.startsWith('없음') ? c.position : '', c.payGrade,
+    c.years === null || c.years === undefined ? '' : yearsLabel(c.years)].filter(Boolean).join(' · ');
+}
+
+export const yearsLabel = (y: number) => (y === 0 ? '1년 미만' : `${y}년차`);

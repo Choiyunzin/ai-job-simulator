@@ -361,3 +361,11 @@ export const ARCHETYPES = {
 
 /** 시간 환산 기준 근무시간: 결과의 절감 시간은 두 기준을 범위로 함께 보여줍니다. */
 export const HOUR_BASES = [40, 52] as const;
+
+/** Q.A 직급·직책·Pay Grade·연차 선택지 (결과 리포트에 표시, 계산에는 쓰지 않음) */
+export const CAREER = {
+  rank: ['매니저', '책임매니저', '전임연구원', '책임연구원'],
+  position: ['없음(팀원)', '팀장', '실장'],
+  payGrade: ['G1', 'G2', 'G3', 'G4', 'R1', 'R2', 'R3', 'R4'],
+  maxYears: 40,
+} as const;

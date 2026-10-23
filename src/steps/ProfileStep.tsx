@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { EDU_EXAMPLES, ENV, LABELS, TYPE_PROFILE } from '../engine/config';
+import { CAREER, EDU_EXAMPLES, ENV, LABELS, TYPE_PROFILE } from '../engine/config';
 import type {
   AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
 import { useApp } from '../state';
-import { LEVELS, isEduPath, optionsAt, useJobCatalog } from '../jobCatalog';
+import { LEVELS, isEduPath, optionsAt, useJobCatalog, yearsLabel } from '../jobCatalog';
 
 const SUBS = ['직무', '업무 정의', 'AI 활용 수준', 'AI 적용 가능성', '성공 기준·걱정', '승인·자료', 'AI 활용 환경', '나의 이야기'];
 const CODES = ['QA', 'QB', 'QC', 'QD', 'QE·F', 'QG', 'QH', 'QI'];
@@ -74,6 +74,50 @@ function QHead({ code, title, desc }: { code: string; title: string; desc?: stri
 
 type Catalog = ReturnType<typeof useJobCatalog>;
 
+/** 직급·직책·Pay Grade·연차 — 모두 선택 입력 */
+function CareerFields() {
+  const { s, d } = useApp();
+  const c = s.profile.career;
+  const set = (patch: Partial<typeof c>) => d({ type: 'profile', patch: { career: { ...c, ...patch } } });
+  return (
+    <div className="career">
+      <div className="divider" />
+      <span className="flabel">직급·직책 <small>선택 입력 · 결과 리포트에만 표시됩니다</small></span>
+      <div className="cascade">
+        <div className="field">
+          <label htmlFor="rank">직급</label>
+          <select id="rank" value={c.rank} onChange={(e) => set({ rank: e.target.value })}>
+            <option value="">선택 안 함</option>
+            {CAREER.rank.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="position">직책</label>
+          <select id="position" value={c.position} onChange={(e) => set({ position: e.target.value })}>
+            <option value="">선택 안 함</option>
+            {CAREER.position.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="paygrade">Pay Grade</label>
+          <select id="paygrade" value={c.payGrade} onChange={(e) => set({ payGrade: e.target.value })}>
+            <option value="">선택 안 함</option>
+            {CAREER.payGrade.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="years">연차</label>
+          <select id="years" value={c.years === null ? '' : String(c.years)}
+            onChange={(e) => set({ years: e.target.value === '' ? null : Number(e.target.value) })}>
+            <option value="">선택 안 함</option>
+            {Array.from({ length: CAREER.maxYears + 1 }, (_, y) => <option key={y} value={y}>{yearsLabel(y)}</option>)}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QJob({ catalog }: { catalog: Catalog }) {
   const { s, d } = useApp();
   const p = s.profile;
@@ -137,6 +181,7 @@ function QJob({ catalog }: { catalog: Catalog }) {
           )}
         </>
       )}
+      <CareerFields />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import { ARCHETYPES, ENV, EVENTS, LABELS, REDESIGN, REINVEST } from './engine/config';
 import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
-import { jobLabel } from './jobCatalog';
+import { careerLabel, jobLabel } from './jobCatalog';
 import { savingsSentence } from './components/WorkweekSim';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
@@ -19,6 +19,13 @@ export function buildReport(s: AppState, res: Res) {
     generatedAt: new Date().toLocaleString('ko-KR'),
     note: '가정에 기반한 교육용 추정치입니다.',
     job: jobLabel(s.profile),
+    career: {
+      rank: s.profile.career.rank || null,
+      position: s.profile.career.position || null,
+      payGrade: s.profile.career.payGrade || null,
+      years: s.profile.career.years,
+      label: careerLabel(s.profile),
+    },
     weeklyHours: s.profile.weeklyHours,
     savingsSummary: savingsSentence(bands),
     savedHoursByBasis: bands.map((b) => ({ weeklyHours: b.base, aiOnly: r2(b.aiSaved), redesign: r2(b.redesignSaved) })),
@@ -79,6 +86,11 @@ const esc = (v: unknown) => {
 export function toCSV(r: Report): string {
   const lines: string[] = [];
   lines.push('구분,항목,값');
+  lines.push(`기본,직무,${esc(r.job)}`);
+  lines.push(`기본,직급,${esc(r.career.rank ?? '')}`);
+  lines.push(`기본,직책,${esc(r.career.position ?? '')}`);
+  lines.push(`기본,Pay Grade,${esc(r.career.payGrade ?? '')}`);
+  lines.push(`기본,연차,${r.career.years ?? ''}`);
   lines.push(`요약,AI 업무 유형,${esc(r.archetype)}`);
   const tl: [string, number][] = [
     ['AI 도입 전 주당 시간', r.totals.beforeHours], ['AI 도입 후 주당 시간', r.totals.afterAiHours],
@@ -110,7 +122,7 @@ export function toCSV(r: Report): string {
 
 export function toText(r: Report): string {
   return [
-    `■ 나의 AI 업무혁신 리포트 (${r.job})`,
+    `■ 나의 AI 업무혁신 리포트 (${r.job}${r.career.label ? ` · ${r.career.label}` : ''})`,
     `유형: ${r.archetype}`,
     r.summary,
     '',

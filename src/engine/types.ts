@@ -56,10 +56,18 @@ export interface Task {
   applicability: Applicability;
 }
 
+export interface Career {
+  rank: string;             // 직급 ('' = 미선택)
+  position: string;         // 직책
+  payGrade: string;         // Pay Grade
+  years: number | null;     // 연차 0~40 (null = 미선택)
+}
+
 export interface Profile {
   job: JobId;
   jobOther: string;
   jobPath: string[];        // 사내 직무 목록에서 고른 경로 [직군, 직종, 직렬, 직무] (목록을 쓰지 않으면 빈 배열)
+  career: Career;           // 직급·직책·Pay Grade·연차 (선택 입력, 리포트 표시용)
   weeklyHours: number;      // 시간 환산 기준 근무시간 (40 또는 52, 상세 그래프 기준)
   tasks: Task[];
   criteria: Criterion[];    // 최대 2개
