@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { CAREER, EDU_EXAMPLES, ENV, LABELS, ROLE_SCALE, TYPE_PROFILE } from '../engine/config';
+import { CAREER, EDU_EXAMPLES, ENV, LABELS, LEADER_POSITIONS, ROLE_SCALE, TYPE_PROFILE } from '../engine/config';
 import type {
   AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
@@ -37,10 +37,12 @@ export default function ProfileStep() {
   const bodies = [<QJob key="a" catalog={catalog} />, <QRoles key="r" />, <QTasks key="b" />, <QLevel key="c" />, <QApplicability key="d" />, <QCriteria key="e" />,
     <QApproval key="g" />, <QAiEnv key="h" />, <QStory key="i" />];
   const jobOk = useList ? s.profile.jobPath.length === 4 : s.profile.job !== 'other' || !!s.profile.jobOther.trim();
-  const canNext = sub === 2 ? tasksOk : sub === 0 ? jobOk : true;
+  const positionOk = !!s.profile.career.position;
+  const canNext = sub === 2 ? tasksOk : sub === 0 ? jobOk && positionOk : true;
   const hint = sub === 2 && !tasksOk
     ? (tasks.length === 0 ? '업무를 1개 이상 추가해 주세요.' : shareTotal > 100 ? '업무 비율 합계가 100%를 넘지 않게 조정해 주세요.' : '빨간 표시가 있는 업무를 확인해 주세요.')
-    : sub === 0 && !canNext ? (useList ? '직군부터 직무까지 차례로 골라 주세요.' : '직무를 직접 입력해 주세요.') : undefined;
+    : sub === 0 && !jobOk ? (useList ? '직군부터 직무까지 차례로 골라 주세요.' : '직무를 직접 입력해 주세요.')
+    : sub === 0 && !positionOk ? '직책을 골라 주세요. 팀장·실장은 다음 질문에서 리더 역할도 체크합니다.' : undefined;
 
   return (
     <section className="profile">
@@ -83,7 +85,7 @@ function CareerFields() {
   return (
     <div className="career">
       <div className="divider" />
-      <span className="flabel">직급·직책 <small>선택 입력 · 결과 리포트에만 표시됩니다</small></span>
+      <span className="flabel">직급·직책 <small>직책은 필수 · 나머지는 선택 입력</small></span>
       <div className="cascade">
         <div className="field">
           <label htmlFor="rank">직급</label>
@@ -93,11 +95,14 @@ function CareerFields() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="position">직책</label>
+          <label htmlFor="position">직책 <b className="req">필수</b></label>
           <select id="position" value={c.position} onChange={(e) => set({ position: e.target.value })}>
-            <option value="">선택 안 함</option>
+            <option value="">직책 선택</option>
             {CAREER.position.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
+          {LEADER_POSITIONS.includes(c.position)
+            ? <small className="ok">✓ 다음 질문에서 직무 역할과 함께 <b>리더 역할</b>을 체크합니다.</small>
+            : c.position ? <small>다음 질문에서 직무 역할을 체크합니다.</small> : null}
         </div>
         <div className="field">
           <label htmlFor="paygrade">Pay Grade</label>
@@ -314,7 +319,7 @@ function QTasks() {
           <div className="chips">
             {roleChoices.map((r) => (
               <button key={r.role} className="chip add" onClick={() => d({ type: 'addTask', task: { name: r.role.slice(0, 30), share: 10 } })}>
-                + {r.role}{r.score !== null && <span className="chip-score num"> {r.score}점</span>}
+                + {r.group === 'leader' && <span className="chip-tag">리더</span>}{r.role}{r.score !== null && <span className="chip-score num"> {r.score}점</span>}
               </button>
             ))}
           </div>
