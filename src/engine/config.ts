@@ -369,3 +369,26 @@ export const CAREER = {
   payGrade: ['G1', 'G2', 'G3', 'G4', 'R1', 'R2', 'R3', 'R4'],
   maxYears: 40,
 } as const;
+
+/** 역할 진단(Q.R) — 5점 척도 */
+export const ROLE_SCALE = ['부족', '다소 부족', '보통', '잘함', '매우 잘함'] as const;
+
+/** 사내 역할 목록이 없을 때 쓰는 기본 역할 (교육기획 직무) */
+export const DEFAULT_EDU_ROLES = [
+  '육성지향점 정의 및 HRD 방향 수립',
+  '학습제도·체계 설계',
+  '교육 로드맵 수립',
+  '학습 성과지표 정의',
+  '학습 시스템 설계',
+];
+
+/** 직책이 팀장·실장일 때 함께 체크하는 리더 역할 (HTML 목록에서 직무 칸을 '리더'로 적으면 교체됨) */
+export const DEFAULT_LEADER_ROLES = [
+  '조직 목표·전략 수립',
+  '구성원 육성·코칭',
+  '성과 관리·평가',
+  '업무 배분·의사결정',
+  '조직문화·소통 관리',
+  '유관부서·이해관계자 협업',
+];
+export const LEADER_POSITIONS = ['팀장', '실장'];

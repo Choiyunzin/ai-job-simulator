@@ -30,7 +30,7 @@ export const blankTask = (): Task => ({
 export const initialState = (): AppState => ({
   step: 0, sub: 0,
   profile: {
-    job: 'edu', jobOther: '', jobPath: [], career: { rank: '', position: '', payGrade: '', years: null }, weeklyHours: 40, tasks: [], criteria: [], concerns: [],
+    job: 'edu', jobOther: '', jobPath: [], career: { rank: '', position: '', payGrade: '', years: null }, roleRatings: {}, customRoles: [], weeklyHours: 40, tasks: [], criteria: [], concerns: [],
     env: { approval: 'one', personalData: 'some', culture: 'solo', tools: [], learning: 'mid' },
     notes: { pain: '', tips: '' },
   },
