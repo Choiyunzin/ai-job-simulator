@@ -85,7 +85,7 @@ function CareerFields() {
   return (
     <div className="career">
       <div className="divider" />
-      <span className="flabel">직급·직책 <small>직책은 필수 · 나머지는 선택 입력</small></span>
+      <span className="flabel">직급·직책</span>
       <div className="cascade">
         <div className="field">
           <label htmlFor="rank">직급</label>
