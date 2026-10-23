@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { LABELS, LEVEL_PROFILE, REDESIGN, SIM, TYPE_PROFILE } from '../engine/config';
+import { APPLICABILITY_MULT, E_POTENTIAL_COEF, FRONTIER_PENALTY, LABELS, LEVEL_PROFILE, REDESIGN, SIM, TYPE_PROFILE, automationCap } from '../engine/config';
+import { eLevelOf, isStd, outsideFrontier } from '../engine/research';
 import { envFactors, fmtMin } from '../engine/simulate';
 import type { ComponentKey, RedesignToggle, TaskResult } from '../engine/types';
 import { CountUp, Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
@@ -348,11 +349,13 @@ function Basis({ r }: { r: TaskResult }) {
   return (
     <div className="basis-body">
       <ul className="formula">
-        <li>잠재력 = 유형 상한 {tp.automation} × 적용 가능성 배수 → <b>{Math.round(r.potential * 100)}%</b></li>
+        <li>{isStd(r.task)
+          ? <>잠재력 = 유형 상한 {automationCap(r.task.type).toFixed(2)} × 노출 계수 {E_POTENTIAL_COEF[eLevelOf(r.task)]}(연구 기준 {eLevelOf(r.task)}) → <b>{Math.round(r.potential * 100)}%</b></>
+          : <>잠재력 = 유형 상한 {automationCap(r.task.type).toFixed(2)} × 적용 가능성 배수 {APPLICABILITY_MULT[r.task.applicability]} → <b>{Math.round(r.potential * 100)}%</b> <small>(직접 입력 업무 · 유형 추정)</small></>}</li>
         <li>실제 대체율 r = 잠재력 × (1 − 이미 실현한 비율 {lp.alreadyCaptured}) → <b>{Math.round(r.reduction * 100)}%</b> (상한 {SIM.maxReduction * 100}%)</li>
         <li>AI 입력·지시 = 대체된 직접작업 × {lp.promptRatio} = <b>{f(r.after.prompt)}h</b></li>
         <li>AI 결과 검토 = 대체된 직접작업 × 검토비율 {tp.verifyRatio}{r.task.difficulty === 'verify' ? ` + ${SIM.difficultyVerifyBonus}(검증 어려움)` : ''} = <b>{f(r.after.aiReview)}h</b></li>
-        <li>오류 재작업 = 대체된 직접작업 × 오류율 {lp.errorRate} × 수정비용 {SIM.reworkCost} = <b>{f(r.after.rework)}h</b></li>
+        <li>오류 재작업 = 대체된 직접작업 × 오류율 {lp.errorRate}{outsideFrontier(r.task) ? ` × ${FRONTIER_PENALTY}(AI 능력 경계 밖 업무)` : ''} × 수정비용 {SIM.reworkCost} = <b>{f(r.after.rework)}h</b></li>
         <li>유지관리 = {lp.maintenance}h × min(1, r ÷ 0.3) = <b>{f(r.after.maintenance)}h</b></li>
         <li>승인 대기(경과) = 기존 대기 × (1 + {SIM.waitGrowthByReduction} × r) = <b>{f(r.after.wait)}h</b></li>
         <li>요청량 증가율 = r × {SIM.volumeGrowthByReduction} = <b>{(r.after.volumeGrowth * 100).toFixed(1)}%</b> → 추가 노동 {f(r.after.extraVolumeLabor)}h (절감률 계산과 분리)</li>

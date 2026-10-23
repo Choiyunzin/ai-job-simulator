@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { CAREER, EDU_EXAMPLES, ENV, LABELS, LEADER_POSITIONS, ROLE_SCALE, TYPE_PROFILE } from '../engine/config';
+import { AI_MODE, CAREER, EDU_EXAMPLES, ENV, E_LEVEL_DESC, LABELS, LEADER_POSITIONS, ROLE_SCALE, TYPE_PROFILE } from '../engine/config';
+import { PERCEPTION_LABEL, eLevelOf, eSourceLabel, isStd, perceptionOf, recommendedFromE, toolsUnknown } from '../engine/research';
+import { stdTasksFor, type StdTask } from '../taskCatalog';
 import type {
-  AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
+  AiLevel, AiMode, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
 import { useApp } from '../state';
 import { LEVELS, isEduPath, optionsAt, useJobCatalog, yearsLabel } from '../jobCatalog';
@@ -297,10 +299,24 @@ function QTasks() {
   const examples = EDU_EXAMPLES.filter((e) => !names.has(e.name));
   const roleRows = useRoleCatalog();
   const roleChoices = currentRoles(s.profile, roleRows).filter((r) => !names.has(r.role.slice(0, 30)));
+  const std = stdTasksFor(s.profile);
+  const pickedStd = tasks.filter((t) => t.taskId && std.some((x) => x.id === t.taskId)).length;
+  const toggleStd = (x: StdTask) => {
+    const ex = tasks.find((t) => t.taskId === x.id);
+    if (ex) { d({ type: 'removeTask', id: ex.id }); return; }
+    if (tasks.length >= 5) return;
+    d({ type: 'addTask', task: {
+      name: x.text, type: x.type, share: 10, taskId: x.id, eLevel: x.eLevel, mckActivity: x.mckActivity,
+      onetCode: x.onetCode, matchLevel: x.matchLevel, aeiAutoShare: x.aeiAutoShare,
+    } });
+  };
 
   return (
     <div className="qcard wide">
-      <QHead code="Q.B" title="나의 실제 업무를 직접 정의해 보세요" desc="전체 업무를 100%로 볼 때, 비중이 큰 업무부터 최대 5개까지 비율을 적어주세요. 예시는 참고용이며 자유롭게 고치거나 지울 수 있습니다." />
+      <QHead code="Q.B" title="나의 실제 업무를 직접 정의해 보세요"
+        desc={std.length
+          ? '전체 업무를 100%로 볼 때, 비중이 큰 업무부터 최대 5개까지 고르고 비율을 적어주세요. 내 직무의 표준 업무에서 먼저 고르고, 목록에 없는 업무만 직접 입력하세요.'
+          : '전체 업무를 100%로 볼 때, 비중이 큰 업무부터 최대 5개까지 비율을 적어주세요. 예시는 참고용이며 자유롭게 고치거나 지울 수 있습니다.'} />
 
       <div className={`hours-meter${over ? ' over' : ''}`}>
         <div className="hm-head">
@@ -312,6 +328,29 @@ function QTasks() {
           ? <p className="warn">⚠ 합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄여 주세요.</p>
           : <small>비율은 추정치여도 괜찮습니다. 나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다. 시간 환산은 마지막 단계에서 근무시간을 바꿔 가며 해볼 수 있어요.</small>}
       </div>
+
+      {std.length > 0 && (
+        <div className="std-pick">
+          <div className="std-head">
+            <b>내 직무의 표준 업무에서 고르기</b>
+            <small>업무시간의 5% 이상을 차지하는 업무 위주로 고르세요 · <span className="num">{pickedStd}/{std.length}</span></small>
+          </div>
+          <ul>
+            {std.map((x) => {
+              const on = tasks.some((t) => t.taskId === x.id);
+              return (
+                <li key={x.id}>
+                  <button role="checkbox" aria-checked={on} className={`std-item${on ? ' on' : ''}`}
+                    disabled={!on && tasks.length >= 5} onClick={() => toggleStd(x)}>
+                    <span className="box">{on ? '✓' : ''}</span>
+                    <span className="std-text">{x.text}<small>{LABELS.type[x.type]}</small></span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {roleChoices.length > 0 && tasks.length < 5 && (
         <div className="examples">
@@ -347,7 +386,8 @@ function QTasks() {
               <button className="task-sum" onClick={() => setOpen(isOpen ? null : t.id)} aria-expanded={isOpen}>
                 <span className="tnum num">{i + 1}</span>
                 <span className="tname">{t.name || '새 업무'}</span>
-                <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)}</span>
+                <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)}
+                  <em className={`src-badge ${isStd(t) ? 'res' : 'est'}`}>{eSourceLabel(t)}</em></span>
                 <span className="caret">{isOpen ? '▴' : '▾'}</span>
               </button>
               {err && <p className="err-msg">{err}</p>}
@@ -357,7 +397,7 @@ function QTasks() {
         })}
       </div>
       {tasks.length < 5 ? (
-        <button className="btn dashed" onClick={() => { d({ type: 'addTask' }); setOpen(null); }}>+ 업무 직접 추가 ({tasks.length}/5)</button>
+        <button className="btn dashed" onClick={() => { d({ type: 'addTask' }); setOpen(null); }}>{std.length ? '+ 목록에 없는 업무 직접 입력' : '+ 업무 직접 추가'} ({tasks.length}/5)</button>
       ) : <p className="fine">업무는 최대 5개까지 입력할 수 있습니다.</p>}
     </div>
   );
@@ -369,11 +409,18 @@ function TaskEditor({ t, onRemove }: { t: Task; onRemove: () => void }) {
   const id = (k: string) => `${t.id}-${k}`;
   return (
     <div className="task-edit">
-      <div className="field">
-        <label htmlFor={id('name')}>업무명</label>
-        <input id={id('name')} value={t.name} maxLength={30} placeholder="예: 교육 만족도 분석" autoFocus={!t.name}
-          onChange={(e) => set({ name: e.target.value })} />
-      </div>
+      {isStd(t) ? (
+        <div className="field">
+          <span className="flabel">업무명 <small>표준 업무 · 업무명과 업무 유형은 고정돼요</small></span>
+          <p className="std-name">{t.name}<small> · {LABELS.type[t.type]}</small></p>
+        </div>
+      ) : (
+        <div className="field">
+          <label htmlFor={id('name')}>업무명</label>
+          <input id={id('name')} value={t.name} maxLength={30} placeholder="예: 교육 만족도 분석" autoFocus={!t.name}
+            onChange={(e) => set({ name: e.target.value })} />
+        </div>
+      )}
       <div className="field">
         <label htmlFor={id('share')}>전체 업무 중 비율 <b className="num">{fmtPct(t.share || 0)}</b></label>
         <div className="range-row">
@@ -391,7 +438,7 @@ function TaskEditor({ t, onRemove }: { t: Task; onRemove: () => void }) {
       <div className="grid2">
         <div className="field">
           <label htmlFor={id('type')}>업무 유형</label>
-          <select id={id('type')} value={t.type} onChange={(e) => set({ type: e.target.value as TaskType })}>
+          <select id={id('type')} value={t.type} disabled={isStd(t)} onChange={(e) => set({ type: e.target.value as TaskType })}>
             {(Object.keys(LABELS.type) as TaskType[]).map((k) => <option key={k} value={k}>{LABELS.type[k]}</option>)}
           </select>
         </div>
@@ -432,6 +479,20 @@ function QLevel() {
               ))}
             </div>
             <p className="pt-desc">{LABELS.aiLevel[t.aiLevel].desc}</p>
+            {t.aiLevel >= 1 && (
+              <div className="mode-q">
+                <span className="flabel">이 업무에서 AI를 주로 어떻게 쓰나요? <small>선택 · 하나만</small></span>
+                <div className="mode-opts" role="radiogroup" aria-label={`${t.name} AI 활용 방식`}>
+                  {(Object.keys(AI_MODE) as AiMode[]).map((m) => (
+                    <button key={m} role="radio" aria-checked={t.aiMode === m} className={`mode-opt ${AI_MODE[m].group}${t.aiMode === m ? ' on' : ''}`}
+                      onClick={() => d({ type: 'task', id: t.id, patch: { aiMode: t.aiMode === m ? null : m } })}>
+                      <em>{AI_MODE[m].group === 'auto' ? '자동화형' : '증강형'}</em>
+                      <b>{AI_MODE[m].label}</b><small>{AI_MODE[m].desc}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -444,13 +505,19 @@ function QApplicability() {
   return (
     <div className="qcard wide">
       <QHead code="Q.D" title="각 업무에 AI를 적용할 수 있는 정도는?"
-        desc="직접 판단해 주세요. '추천' 표시는 업무 유형을 참고한 값일 뿐 확정된 판단이 아닙니다." />
+        desc="직접 판단해 주세요. 직접 입력한 업무는 이 답으로 잠재력을 계산하고, 표준 업무는 연구 기준 등급으로 계산한 뒤 내 판단과의 차이를 보여줘요." />
       <div className="per-task">
         {s.profile.tasks.map((t) => {
-          const rec = TYPE_PROFILE[t.type].recommended;
+          const rec = isStd(t) ? recommendedFromE[eLevelOf(t)] : TYPE_PROFILE[t.type].recommended;
+          const pc = perceptionOf(t);
           return (
             <div key={t.id} className="pt-row">
-              <div className="pt-name"><b>{t.name}</b><small>{LABELS.type[t.type]}</small></div>
+              <div className="pt-name"><b>{t.name}</b><small>{LABELS.type[t.type]}</small>
+                <em className={`src-badge ${isStd(t) ? 'res' : 'est'}`}>{eSourceLabel(t)}</em></div>
+              {isStd(t) && (
+                <p className="pt-desc">연구 기준 {eLevelOf(t)} · {E_LEVEL_DESC[eLevelOf(t)]}
+                  {pc && <span className={`perc ${pc}`}> → 내 판단: {PERCEPTION_LABEL[pc]}</span>}</p>
+              )}
               <div className="app-opts" role="radiogroup" aria-label={`${t.name} AI 적용 가능성`}>
                 {(Object.keys(LABELS.applicability) as Applicability[]).map((k) => (
                   <button key={k} role="radio" aria-checked={t.applicability === k}
@@ -549,6 +616,9 @@ function QAiEnv() {
           );
         })}
       </div>
+      {toolsUnknown(env)
+        ? <small className="warn">쓸 수 있는 도구를 모르면 연구 기준 진단에서 '사내 실현 가능'을 절반만 반영해요. 팀에 사용 가능 도구를 확인해 보세요.</small>
+        : <small>고른 도구에 따라 STEP 3에서 '연구상 AI로 가능한 업무' 중 지금 회사 도구로 실제 가능한 비중을 계산해요.</small>}
       <div className="divider" />
       <QHead code="Q.H-2" title="우리 팀은 AI를 어떻게 쓰고 있나요?" desc="함께 쓰는 팀일수록 지시문을 다시 만들고 도구를 익히는 시간이 줄어듭니다." />
       <OptionCards<TeamCulture> name="팀의 AI 활용 방식" value={env.culture} options={ENV.culture}

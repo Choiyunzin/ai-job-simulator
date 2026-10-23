@@ -4,7 +4,12 @@ import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
 import { careerLabel, jobLabel } from './jobCatalog';
 import { currentRoles, readRoles, roleSummary } from './roleCatalog';
-import { ROLE_SCALE } from './engine/config';
+import { AI_MODE, RESEARCH_DATA_DATE, RESEARCH_SOURCES, ROLE_SCALE } from './engine/config';
+import {
+  CONFIDENCE_LABEL, QUADRANT_INFO, eLevelOf, feasibleOf, isStd, modeOf, perceptionOf, PERCEPTION_LABEL, researchDiagnosis, researchSentence,
+} from './engine/research';
+import { taskMasterVersion } from './taskCatalog';
+import { RESEARCH_NOTICE } from './components/ResearchCard';
 import { savingsSentence } from './components/WorkweekSim';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
@@ -19,7 +24,9 @@ export function buildReport(s: AppState, res: Res) {
   const expTask = s.profile.tasks.find((t) => t.id === dx.firstExperiment?.id) ?? s.profile.tasks[0];
   return {
     generatedAt: new Date().toLocaleString('ko-KR'),
-    note: '가정에 기반한 교육용 추정치입니다.',
+    note: `가정에 기반한 교육용 추정치입니다. ${RESEARCH_NOTICE}`,
+    dataVersion: { taskMaster: taskMasterVersion() || null, research: RESEARCH_DATA_DATE, sources: RESEARCH_SOURCES },
+    research: researchBlock(s),
     job: jobLabel(s.profile),
     career: {
       rank: s.profile.career.rank || null,
@@ -66,7 +73,14 @@ export function buildReport(s: AppState, res: Res) {
     tasks: redesign.tasks.map((r, i) => {
       const a = after.tasks[i];
       return {
-        name: r.task.name, sharePct: r.task.share, type: LABELS.type[r.task.type], frequency: LABELS.frequency[r.task.frequency],
+        name: r.task.name, sharePct: r.task.share,
+        taskId: r.task.taskId ?? null, eLevel: eLevelOf(r.task), eSource: isStd(r.task) ? '연구 기준' : '유형 추정',
+        feasible: feasibleOf(eLevelOf(r.task), s.profile.env),
+        aiMode: (() => { const m = modeOf(r.task); return m === 'none' ? '없음' : m ? AI_MODE[m].label : '미응답'; })(),
+        perception: (() => { const pc = perceptionOf(r.task); return pc ? PERCEPTION_LABEL[pc] : null; })(),
+        mckActivity: r.task.mckActivity ?? null, onetCode: r.task.onetCode ?? null, matchLevel: r.task.matchLevel ?? null,
+        aeiAutoShare: r.task.aeiAutoShare ?? null,
+        type: LABELS.type[r.task.type], frequency: LABELS.frequency[r.task.frequency],
         importance: LABELS.importance[r.task.importance], aiLevel: r.task.aiLevel,
         applicability: LABELS.applicability[r.task.applicability].title,
         beforeHours: r2(r.before.labor), afterAiHours: r2(a.after.labor), redesignHours: r2(r.after.labor),
@@ -101,6 +115,12 @@ export function toCSV(r: Report): string {
   lines.push(`기본,연차,${r.career.years ?? ''}`);
   lines.push(`요약,AI 업무 유형,${esc(r.archetype)}`);
   r.roles.forEach((x) => lines.push(`역할 진단(${esc(x.group)}),${esc(x.role)},${x.score ?? ''}`));
+  const rs = r.research;
+  ([['연구 기준 노출도(β)', rs.exposureBeta], ['노출도 보수(α)', rs.exposureAlpha], ['노출도 적극(ζ)', rs.exposureZeta], ['사내 실현 가능 노출도', rs.feasibleExposure],
+    ['현재 활용도', rs.usage], ['인프라 갭', rs.infraGap], ['역량 갭', rs.skillGap], ['경계 밖 사용 신호', rs.frontierSignal],
+    ['자동화형 비율', rs.autoShare ?? '']] as [string, number | string][]).forEach(([k, v]) => lines.push(`연구 기준 진단,${esc(k)},${v}`));
+  lines.push(`연구 기준 진단,4분면,${esc(rs.quadrant)}`);
+  lines.push(`연구 기준 진단,신뢰도,${esc(rs.confidence)}`);
   const tl: [string, number][] = [
     ['AI 도입 전 주당 시간', r.totals.beforeHours], ['AI 도입 후 주당 시간', r.totals.afterAiHours],
     ['재설계 후 주당 시간', r.totals.redesignHours], ['순절감 시간', r.totals.savedHoursSameVolume],
@@ -117,8 +137,8 @@ export function toCSV(r: Report): string {
   if (r.myStory.aiWish) lines.push(`나의 이야기,AI로 덜고 싶은 고민,${esc(r.myStory.aiWish)}`);
   if (r.myStory.tips) lines.push(`나의 이야기,활용 팁,${esc(r.myStory.tips)}`);
   lines.push('');
-  lines.push('업무명,업무 비율(%),유형,빈도,중요도,AI 활용 단계,적용 가능성,도입 전(h),AI 도입 후(h),재설계 후(h),대체율(%),품질,위험');
-  r.tasks.forEach((t) => lines.push([t.name, t.sharePct, t.type, t.frequency, t.importance, t.aiLevel, t.applicability,
+  lines.push('업무명,업무 비율(%),연구 등급,출처,실현 가능,활용 방식,인식 차이,유형,빈도,중요도,AI 활용 단계,적용 가능성,도입 전(h),AI 도입 후(h),재설계 후(h),대체율(%),품질,위험');
+  r.tasks.forEach((t) => lines.push([t.name, t.sharePct, t.eLevel, t.eSource, t.feasible, t.aiMode, t.perception ?? '', t.type, t.frequency, t.importance, t.aiLevel, t.applicability,
     t.beforeHours, t.afterAiHours, t.redesignHours, t.reductionPct, t.qualityAfter, t.riskAfter].map(esc).join(',')));
   lines.push('');
   lines.push('상황,선택,대응');
@@ -135,6 +155,8 @@ export function toText(r: Report): string {
     `유형: ${r.archetype}`,
     r.summary,
     '',
+    `· 연구 기준 진단: ${r.research.sentence} (4분면: ${r.research.quadrant}, 신뢰도 ${r.research.confidence})`,
+    `· 추천 방향: ${r.research.recommendation}`,
     `· ${r.savingsSummary} (업무 흐름 재설계 반영, 같은 업무량)`,
     `· [주 ${r.weeklyHours}시간 근무 기준] AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
     `· 순절감 ${r.totals.savedHoursSameVolume}h (${r.totals.savingRatePct}%), 늘어난 요청 처리 ${r.totals.extraVolumeHours}h, 재투자 가능 ${r.totals.reinvestableHours}h`,
@@ -154,4 +176,20 @@ export function toText(r: Report): string {
     '',
     `(${r.note} ${r.generatedAt})`,
   ].join('\n');
+}
+
+/** F-22 저장·출력 데이터 */
+function researchBlock(s: AppState) {
+  const b = researchDiagnosis(s.profile, 'beta');
+  const r3 = (v: number) => Math.round(v * 1000) / 1000;
+  return {
+    exposureAlpha: r3(b.exposureAlpha), exposureBeta: r3(b.exposureBeta), exposureZeta: r3(b.exposureZeta),
+    feasibleExposure: r3(b.feasibleExposure), usage: r3(b.usage), infraGap: r3(b.infraGap), skillGap: r3(b.skillGap),
+    frontierSignal: r3(b.frontierSignal), frontierTasks: b.frontierTasks,
+    autoShare: b.autoShare === null ? null : r3(b.autoShare),
+    aeiCompare: b.aeiCompare ? { mine: r3(b.aeiCompare.mine), global: r3(b.aeiCompare.global) } : null,
+    quadrant: QUADRANT_INFO[b.quadrant].name, confidence: CONFIDENCE_LABEL[b.confidence], stdShare: r3(b.stdShare),
+    sentence: researchSentence(b), recommendation: b.recommendation,
+    dataVersion: `${taskMasterVersion() || '표준 Task 없음'} / ${RESEARCH_DATA_DATE}`,
+  };
 }

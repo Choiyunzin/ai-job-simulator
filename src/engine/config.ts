@@ -4,7 +4,7 @@
 // 숫자를 바꾸면 화면의 결과와 '계산 근거'가 함께 바뀝니다.
 // ─────────────────────────────────────────────
 import type {
-  AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, EventId, ChoiceId,
+  AiLevel, AiMode as _AiMode, AiTool, Applicability, ELevel as _ELevel, ExposureScenario as _Scn, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, EventId, ChoiceId,
   Frequency, Importance, JobId, Levers, RedesignToggle, TaskType,
 } from './types';
 
@@ -392,3 +392,88 @@ export const DEFAULT_LEADER_ROLES = [
   '유관부서·이해관계자 협업',
 ];
 export const LEADER_POSITIONS = ['팀장', '실장'];
+
+// ─────────────────────────────────────────────
+// v2 글로벌 연구 기준 진단 (상세 기능 정의서 v2 · 8.2~8.3, F-21·F-22)
+// '연구 근거' 값과 '사내 결정·초기 가정' 값을 구분해 표시합니다.
+// ─────────────────────────────────────────────
+
+/** 노출 등급 점수 — 연구 근거: Eloundou et al. α·β·ζ */
+export const RESEARCH_E_SCORE: Record<_Scn, Record<_ELevel, number>> = {
+  alpha: { E0: 0, E1: 1, E2: 0 },
+  beta: { E0: 0, E1: 1, E2: 0.5 },
+  zeta: { E0: 0, E1: 1, E2: 1 },
+};
+export const SCENARIO_LABEL: Record<_Scn, string> = { alpha: '보수(α)', beta: '중간(β)', zeta: '적극(ζ)' };
+export const E_LEVEL_DESC: Record<_ELevel, string> = {
+  E1: 'AI만으로 같은 품질에 시간을 절반 이상 줄일 수 있는 업무',
+  E2: 'AI에 추가 도구·시스템을 연결해야 시간을 크게 줄일 수 있는 업무',
+  E0: 'AI로 시간을 크게 줄이기 어려운 업무',
+};
+
+/** 시뮬레이션용 노출 계수 — 초기 가정값 [사내 실측 보정 대상] */
+export const E_POTENTIAL_COEF: Record<_ELevel, number> = { E1: 1.0, E2: 0.8, E0: 0.2 };
+
+/** 직접 입력 업무의 업무 유형별 기본 등급 (8.3 제안안) [사내 검토 필요] */
+export const TYPE_DEFAULT_E: Record<TaskType, _ELevel> = {
+  research: 'E1', document: 'E1', data: 'E2', idea: 'E1',
+  communication: 'E0', review: 'E2', repetitive: 'E2', other: 'E0',
+};
+
+/** McKinsey 업무 활동 유형별 기술적 자동화 잠재력(%) — 연구 근거: McKinsey Global Institute, 2023.6, 중간 시나리오 */
+export const MCK_ACTIVITY = {
+  source: 'McKinsey Global Institute, "The economic potential of generative AI" (2023.6), 중간 시나리오',
+  activities: {
+    expertise: { label: '전문성 적용(의사결정·기획·창의)', withoutGen: 24.5, withGen: 58.5 },
+    people: { label: '사람 관리·육성', withoutGen: 15.5, withGen: 49.0 },
+    stakeholder: { label: '이해관계자 소통', withoutGen: 24.0, withGen: 45.0 },
+    processing: { label: '데이터 처리', withoutGen: 73.0, withGen: 90.5 },
+    collection: { label: '데이터 수집', withoutGen: 68.0, withGen: 79.0 },
+    physicalUnpredictable: { label: '예측 불가능한 물리 작업', withoutGen: 45.0, withGen: 46.0 },
+    physicalPredictable: { label: '예측 가능한 물리 작업', withoutGen: 72.5, withGen: 73.0 },
+  },
+  /** 업무 유형 8종 → 활동 유형 (제안안) [사내 검토 필요]. 문서 작성·요약은 데이터 처리/전문성 적용 중 사내 결정 전이라 null */
+  typeMap: {
+    research: 'collection', document: null, data: 'processing', idea: 'expertise',
+    communication: 'stakeholder', review: 'expertise', repetitive: 'processing', other: null,
+  } as Record<TaskType, McKey | null>,
+  /** 단기 실현 계수 k [사내 결정 필요]. null이면 v1 자동화 상한을 그대로 사용 */
+  k: null as number | null,
+};
+export type McKey = 'expertise' | 'people' | 'stakeholder' | 'processing' | 'collection' | 'physicalUnpredictable' | 'physicalPredictable';
+
+/** 업무 유형별 자동화 상한: k가 정해지면 McKinsey 잠재력 × k, 아니면 v1 값 */
+export function automationCap(type: TaskType): number {
+  const act = MCK_ACTIVITY.typeMap[type];
+  if (MCK_ACTIVITY.k !== null && act) return (MCK_ACTIVITY.activities[act].withGen / 100) * MCK_ACTIVITY.k;
+  return TYPE_PROFILE[type].automation;
+}
+
+/** 4분면 기준선 — 초기 가정값 [사내 보정 필요], 조직 데이터 축적 후 전사 중앙값으로 교체 */
+export const QUADRANT = { x: 0.5, y: 0.3 };
+/** AI 능력 경계 밖(E0) 업무에 2단계 이상 활용 시 AI 오류율 배수 — 근거: Dell'Acqua et al.(2023), 값은 초기 가정 [사내 보정 필요] */
+export const FRONTIER_PENALTY = 1.3;
+/** 신뢰도 배지 기준: 표준 Task 업무 비중 */
+export const CONFIDENCE = { high: 0.7, mid: 0.3 };
+/** 교육 방향 추천에서 '자동화형 비율 높음' 기준 — 초기 가정값 */
+export const AUTO_SHARE_HIGH = 0.5;
+
+/** AI 활용 방식 5패턴 — 연구 근거: Anthropic Economic Index */
+export const AI_MODE: Record<_AiMode, { label: string; desc: string; en: string; group: 'auto' | 'aug' }> = {
+  directive: { label: '맡기기', desc: '할 일을 주고 결과를 거의 그대로 받음', en: 'Directive', group: 'auto' },
+  feedback: { label: '피드백 반복', desc: '결과를 실행해 보고 오류·결과를 다시 알려주며 완성', en: 'Feedback Loop', group: 'auto' },
+  iteration: { label: '함께 다듬기', desc: '초안을 같이 여러 번 고쳐 나감', en: 'Task Iteration', group: 'aug' },
+  learning: { label: '배우기', desc: '개념·방법을 물어보고 이해함', en: 'Learning', group: 'aug' },
+  validation: { label: '검토받기', desc: '내가 만든 결과물을 AI에게 점검받음', en: 'Validation', group: 'aug' },
+};
+
+/** Anthropic Economic Index 전체 기준값 — 운영 담당이 최신 보고서에서 입력 [확인 필요]. null이면 표시하지 않음 */
+export const AEI_GLOBAL = { autoShare: null as number | null, report: '', date: '' };
+
+/** 연구 데이터 출처·기준 (리포트·내보내기에 표시) */
+export const RESEARCH_SOURCES = [
+  'Eloundou et al., "GPTs are GPTs" (2023 공개, 2024 Science 게재)',
+  'McKinsey Global Institute, "The economic potential of generative AI" (2023.6)',
+  'Anthropic Economic Index (2025.2~, 최신 2026.6 보고서)',
+];
+export const RESEARCH_DATA_DATE = 'Eloundou 2024 · McKinsey 2023.6 · Anthropic Economic Index 2026.6';

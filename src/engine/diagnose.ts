@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────
 // 진단·개인화 로직: 유형 판정, TOP3, 병목, 상황 카드 추천, 리포트 문구
 // ─────────────────────────────────────────────
-import { APPLICABILITY_MULT, ARCHETYPES, ENV, EVENT_AFFINITY, LABELS, TYPE_PROFILE } from './config';
-import { clamp, fmtH } from './simulate';
+import { ARCHETYPES, ENV, EVENT_AFFINITY, LABELS, TYPE_PROFILE } from './config';
+import { clamp, envFactors, fmtH } from './simulate';
+import { eLevelOf, feasibleOf, outsideFrontier, taskPotential } from './research';
 import type {
   ArchetypeId, Diagnosis, EventId, Profile, ScenarioResult, Task, TaskResult,
 } from './types';
@@ -16,7 +17,8 @@ export function diagnose(profile: Profile, after: ScenarioResult): Diagnosis {
   const wavg = (f: (t: Task) => number) => tasks.reduce((s, r) => s + f(r.task) * r.task.hours, 0) / W;
 
   const avgLevel = wavg((t) => t.aiLevel);
-  const avgPotential = wavg((t) => clamp(TYPE_PROFILE[t.type].automation * APPLICABILITY_MULT[t.applicability], 0, 0.9));
+  const boost = envFactors(profile.env).repetitiveBoost;
+  const avgPotential = wavg((t) => taskPotential(t, boost)); // v2: 표준 Task는 연구 등급 기반
   const share = (pred: (t: Task) => boolean) => tasks.filter((r) => pred(r.task)).reduce((s, r) => s + r.task.hours, 0) / W;
 
   const highLevelShare = share((t) => t.aiLevel >= 3);
@@ -25,13 +27,14 @@ export function diagnose(profile: Profile, after: ScenarioResult): Diagnosis {
   const verifyBurden = share((t) => t.type === 'review' || t.difficulty === 'verify' || t.importance === 'high');
   const qualityConcerns = profile.concerns.filter((c) => ['hallucination', 'lowQuality', 'security', 'moreReview'].includes(c)).length;
   const qualityCriteria = profile.criteria.filter((c) => c === 'quality' || c === 'error').length;
+  const frontierShare = share(outsideFrontier); // v2: AI가 잘 못하는 업무(E0)에 2단계 이상 활용하는 비중
 
   // 네 유형 점수 (0~100) — 결과 화면 '계산 근거'에 그대로 노출
   const scores: Record<ArchetypeId, number> = {
     explorer: clamp(avgPotential * 100 * (1 - avgLevel / 4) * 1.6, 0, 100),
     partner: clamp(100 - Math.abs(avgLevel - 2) * 40 - (1 - docShareUsed) * 25, 0, 100),
     orchestrator: clamp(highLevelShare * 80 + (levelTypes >= 2 ? 15 : 0) + (tasks.some((r) => r.task.aiLevel === 4) ? 10 : 0), 0, 100),
-    guardian: clamp(verifyBurden * 45 + qualityConcerns * 9 + qualityCriteria * 12 + (profile.env?.personalData === 'lots' ? 10 : 0), 0, 100),
+    guardian: clamp(verifyBurden * 45 + qualityConcerns * 9 + qualityCriteria * 12 + (profile.env?.personalData === 'lots' ? 10 : 0) + frontierShare * 40, 0, 100),
   };
   const archetype = (Object.keys(scores) as ArchetypeId[]).reduce((a, b) => (scores[b] > scores[a] ? b : a), 'explorer');
 
@@ -62,7 +65,8 @@ export function diagnose(profile: Profile, after: ScenarioResult): Diagnosis {
   // 첫 실험 업무: 절감 효과 × 검증 용이성 × 위험 낮음
   const expScore = (r: TaskResult) =>
     saved(r) * (r.task.importance === 'high' ? 0.75 : 1.1) * (1 - TYPE_PROFILE[r.task.type].verifyRatio)
-    * (r.task.applicability === 'low' ? 0.5 : 1);
+    * (r.task.applicability === 'low' ? 0.5 : 1)
+    * (eLevelOf(r.task) === 'E1' && feasibleOf('E1', profile.env) === 1 ? 1.15 : 1); // v2: E1·사내 실현 가능 업무 우선
   const best = [...tasks].sort((a, b) => expScore(b) - expScore(a))[0];
   const firstExperiment = best && saved(best) > 0.05
     ? {
@@ -86,6 +90,7 @@ export function diagnose(profile: Profile, after: ScenarioResult): Diagnosis {
     { label: '검증 부담 업무 비중(검토형·검증 어려움·중요도 높음)', value: `${Math.round(verifyBurden * 100)}%` },
     { label: '품질·정확성 관련 우려 개수', value: `${qualityConcerns}개` },
     { label: '개인정보를 많이 다루는 환경(품질 수호자 +10)', value: profile.env?.personalData === 'lots' ? '예' : '아니요' },
+    { label: 'AI가 잘 못하는 업무(E0)에 2단계 이상 활용하는 비중(품질 수호자 ×40)', value: `${Math.round(frontierShare * 100)}%` },
   ];
 
   return { archetype, scores, totalHours, avgLevel, avgPotential, topTasks, bottlenecks, firstExperiment, sentence, factors };

@@ -9,3 +9,6 @@ dist/artifact.html
 # 사내 직무 목록이 들어간 파일
 *.tsv
 *-사내.html
+
+# 예시 양식은 저장소에 포함
+!templates/*.tsv

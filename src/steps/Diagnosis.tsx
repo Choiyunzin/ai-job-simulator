@@ -6,12 +6,16 @@ import type { ArchetypeId } from '../engine/types';
 import { CountUp, Meter } from '../components/viz';
 import { useApp } from '../state';
 import { useResults } from '../useResults';
+import { ResearchCard } from '../components/ResearchCard';
+import { researchDiagnosis } from '../engine/research';
 
 export default function Diagnosis() {
   const { s, d } = useApp();
   const { dx, after } = useResults();
   const shareTotal = s.profile.tasks.reduce((x, t) => x + (t.share || 0), 0);
   const A = ARCHETYPES[dx.archetype];
+  const rs = researchDiagnosis(s.profile, 'beta');
+  const potBadge = rs.stdShare >= 0.5 ? '연구 기준' : '유형 추정';
   const job = jobLabel(s.profile);
   const currentAi = after.tasks.reduce((x, r) => x + r.before.currentAiHours, 0);
   const startSim = (id?: string) => {
@@ -28,7 +32,7 @@ export default function Diagnosis() {
           <small>{job} · 나의 AI 업무 유형은</small>
           <h1>{A.name}</h1>
           <p className="dx-tag">{A.tagline}</p>
-          <p className="dx-sentence">{dx.sentence}</p>
+          <p className="dx-sentence">{dx.sentence}{dx.archetype === 'explorer' && rs.quadrant === 'priority' && ' 연구 기준으로도 AI 활용 여지가 큰 상태입니다.'}</p>
         </div>
       </div>
 
@@ -44,9 +48,11 @@ export default function Diagnosis() {
           <small>업무시간 가중 평균</small></div>
         <div className="stat"><span>현재 AI 활용 시간(추정)</span><b><CountUp value={currentAi} />시간</b>
           <small>활용 단계별 가정 비율 적용</small></div>
-        <div className="stat"><span>평균 AI 적용 잠재력</span><b><CountUp value={dx.avgPotential * 100} decimals={0} />%</b>
-          <small>업무 유형 × 적용 가능성</small></div>
+        <div className="stat"><span>평균 AI 적용 잠재력 <em className={`src-badge ${potBadge === '연구 기준' ? 'res' : 'est'}`}>{potBadge}</em></span><b><CountUp value={dx.avgPotential * 100} decimals={0} />%</b>
+          <small>{potBadge === '연구 기준' ? '유형 상한 × 연구 등급 계수' : '업무 유형 × 적용 가능성'}</small></div>
       </div>
+
+      <ResearchCard profile={s.profile} />
 
       <div className="grid2 gap">
         <div className="card">
@@ -100,7 +106,8 @@ export default function Diagnosis() {
           <li>탐험가 = 잠재력 × (1 − 활용수준/4) × 160</li>
           <li>실무 파트너 = 100 − |활용수준 − 2| × 40 − (문서·조사·분석 업무 미활용 비중) × 25</li>
           <li>오케스트레이터 = 3단계 이상 비중 × 80 + (서로 다른 유형 2개 이상 +15) + (4단계 업무 +10)</li>
-          <li>품질 수호자 = 검증 부담 비중 × 45 + 품질 우려 × 9 + 품질·오류 성공기준 × 12</li>
+          <li>품질 수호자 = 검증 부담 비중 × 45 + 품질 우려 × 9 + 품질·오류 성공기준 × 12 + (개인정보 많음 +10) + AI 능력 경계 밖 활용 비중 × 40</li>
+          <li>잠재력: 표준 업무는 유형 상한 × 연구 등급 계수, 직접 입력 업무는 유형 상한 × 적용 가능성 배수</li>
         </ul>
       </details>
 

@@ -3,9 +3,10 @@
 // UI와 완전히 분리된 순수 함수입니다.
 // ─────────────────────────────────────────────
 import {
-  ENV, APPLICABILITY_MULT, BASE_WEIGHTS, CRITERIA_WEIGHTS, EVENTS, LEVEL_PROFILE, NEUTRAL_LEVERS, OCCURRENCES_PER_WEEK,
+  ENV, BASE_WEIGHTS, CRITERIA_WEIGHTS, EVENTS, LEVEL_PROFILE, NEUTRAL_LEVERS, OCCURRENCES_PER_WEEK,
   REDESIGN, SIM, TYPE_PROFILE,
 } from './config';
+import { frontierMult, taskPotential } from './research';
 import type {
   ChoiceId, ComponentKey, WorkEnv, EventId, Levers, Overrides, Profile, RedesignToggle,
   ScenarioResult, Task, TaskResult,
@@ -88,14 +89,16 @@ export function simulateTask(task: Task, L: Levers, ov: Partial<Record<Component
   const bApprover = bLabor * tp.approverRatio * E.approverMult;
 
   // ── 잠재력과 실제 대체율 ──
-  const potential = clamp(tp.automation * APPLICABILITY_MULT[task.applicability] * (task.type === 'repetitive' ? E.repetitiveBoost : 1), 0, 0.9);
+  // v2: 표준 Task는 자동화 상한 × 노출 계수, 직접 입력은 v1(자동화 상한 × 적용 가능성 배수)
+  const potential = taskPotential(task, E.repetitiveBoost);
   const reduction = h > 0 ? clamp(potential * (1 - lp.alreadyCaptured), 0, SIM.maxReduction) : 0;
   const replaced = bDirect * reduction;
   const active = reduction > 0.02;
 
   // ── AI 도입 후: 기본값 → 사용자 조정값 → 재설계 레버 순으로 적용 ──
   const verifyRatio = tp.verifyRatio + (task.difficulty === 'verify' ? SIM.difficultyVerifyBonus : 0);
-  const errorRate = lp.errorRate * E.errorMult;
+  // v2: AI가 잘 못하는 업무(E0)에 2단계 이상 활용하면 오류율 가산 (Dell'Acqua et al. 2023)
+  const errorRate = lp.errorRate * E.errorMult * frontierMult(task);
   const prompt = pick('prompt', replaced * lp.promptRatio * E.promptMult) * L.promptMult;
   const manualDirect = pick('manualDirect', bDirect - replaced);
   const aiReview = pick('aiReview', replaced * verifyRatio) * L.verifyMult;

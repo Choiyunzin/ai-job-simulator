@@ -19,6 +19,13 @@ export type Difficulty =
 
 export type AiLevel = 0 | 1 | 2 | 3 | 4;
 
+/** v2 연구 기준: Eloundou et al. 노출 등급 */
+export type ELevel = 'E0' | 'E1' | 'E2';
+/** v2 AI 활용 방식: Anthropic Economic Index 5패턴 */
+export type AiMode = 'directive' | 'feedback' | 'iteration' | 'learning' | 'validation';
+/** v2 노출도 시나리오: 보수(α) / 중간(β) / 적극(ζ) */
+export type ExposureScenario = 'alpha' | 'beta' | 'zeta';
+
 export type Applicability = 'high' | 'mid' | 'low' | 'unknown';
 
 export type Criterion =
@@ -54,6 +61,14 @@ export interface Task {
   difficulty: Difficulty;
   aiLevel: AiLevel;
   applicability: Applicability;
+  // ── v2: 표준 Task를 골랐을 때만 채워짐 (직접 입력 업무는 없음 → 유형 추정) ──
+  taskId?: string;          // 표준 Task ID
+  eLevel?: ELevel;          // 연구 기준 노출 등급
+  mckActivity?: string;     // McKinsey 활동 유형
+  onetCode?: string;        // O*NET 직업 코드
+  matchLevel?: string;      // O*NET 대응 수준 (일치/유사/없음)
+  aeiAutoShare?: number | null; // Anthropic 자동화형 비중 (0~1, 대응된 경우만)
+  aiMode?: AiMode | null;   // v2: AI 활용 방식 (활용 1단계 이상일 때만 질문, null = 미응답)
 }
 
 export interface Career {

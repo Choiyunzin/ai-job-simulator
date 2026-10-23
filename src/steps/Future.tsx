@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react';
 import { StepNav } from '../App';
 import { ARCHETYPES, REINVEST } from '../engine/config';
 import { careerLabel, jobLabel } from '../jobCatalog';
+import { RESEARCH_SOURCES, RESEARCH_DATA_DATE } from '../engine/config';
+import { QUADRANT_INFO, CONFIDENCE_LABEL, pct, researchDiagnosis } from '../engine/research';
+import { RESEARCH_NOTICE } from '../components/ResearchCard';
 import { currentRoles, roleSummary, useRoleCatalog } from '../roleCatalog';
 import { cautions, nextExperiment } from '../engine/diagnose';
 import { fmtH } from '../engine/simulate';
@@ -20,6 +23,7 @@ export default function Future() {
   const res = useResults();
   const roleRows = useRoleCatalog();
   const roles = roleSummary(currentRoles(s.profile, roleRows));
+  const rs = researchDiagnosis(s.profile, 'beta');
   const { after, redesign, dx, contrib, bands } = res;
   const T = redesign.totals;
   const free = Math.max(0, T.freeTime);
@@ -129,6 +133,19 @@ export default function Future() {
             <p>{dx.sentence}</p>
           </div>
         </div>
+        {rs.rows.length > 0 && (
+          <div className="rc-research">
+            <h4>글로벌 연구 기준 진단 <small>신뢰도 {CONFIDENCE_LABEL[rs.confidence]} · {QUADRANT_INFO[rs.quadrant].name}</small></h4>
+            <div className="rc-r-nums">
+              <span>연구 기준 노출도 <b className="num">{pct(rs.exposure)}</b></span>
+              <span>사내 실현 가능 <b className="num">{pct(rs.feasibleExposure)}</b></span>
+              <span>현재 활용도 <b className="num">{pct(rs.usage)}</b></span>
+              <span>역량 갭 <b className="num">{pct(rs.skillGap)}</b></span>
+              <span>인프라 갭 <b className="num">{pct(rs.infraGap)}</b></span>
+            </div>
+            <p>{rs.recommendation}</p>
+          </div>
+        )}
         <div className="rc-grid">
           <div>
             <h4>AI 도입 잠재력 TOP 3</h4>
@@ -173,7 +190,8 @@ export default function Future() {
             <ul>{tips.map((t) => <li key={t}>{t}</li>)}</ul>
           </div>
         </div>
-        <p className="fine">가정에 기반한 교육용 추정치입니다. 생성 시각 {report.generatedAt}</p>
+        <p className="fine">가정에 기반한 교육용 추정치입니다. {RESEARCH_NOTICE} 생성 시각 {report.generatedAt}</p>
+        <p className="fine">연구 출처: {RESEARCH_SOURCES.join(' / ')} · 데이터 기준: {RESEARCH_DATA_DATE}</p>
       </div>
 
       <Exports json={JSON.stringify(report, null, 2)} csv={toCSV(report)} text={toText(report)} />
