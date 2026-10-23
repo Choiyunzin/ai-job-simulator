@@ -1,12 +1,13 @@
 // Vite 없이 esbuild만으로 '파일 하나짜리 HTML'을 만드는 스크립트
 // 사용: node scripts/build-single.mjs  → dist/ai-job-simulator.html (직무 목록 칸은 비어 있음)
-//      node scripts/build-single.mjs --list 목록.tsv --out 사내용.html  → 직무 목록을 넣은 사내 배포용 HTML
+//      node scripts/build-single.mjs --list 목록.tsv [--roles 역할.tsv] --out 사내용.html  → 직무·역할 목록을 넣은 사내 배포용 HTML
 //      (사내용 파일은 저장소에 올리지 마세요)
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const listFile = arg('--list');
+const rolesFile = arg('--roles');
 const outFile = arg('--out') ?? 'dist/ai-job-simulator.html';
 
 const result = await build({
@@ -33,6 +34,9 @@ const header = '직군\t직종\t직렬\t직무';
 const rows = listFile
   ? readFileSync(listFile, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l && !/^직군\s/.test(l))
   : [];
+const roleRows = rolesFile
+  ? readFileSync(rolesFile, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l && !/^직무\s+역할/.test(l))
+  : [];
 // 템플릿 문자열 안에서 깨지지 않도록 역슬래시·백틱·${ 를 무력화
 const esc = (t) => t.replace(/\\/g, '\\\\').replace(/`/g, "'").replace(/\$\{/g, '$ {');
 const listBlock = `<!-- ▼▼▼ 직무 목록: 이 사이만 고치면 됩니다 ▼▼▼
@@ -42,7 +46,15 @@ const listBlock = `<!-- ▼▼▼ 직무 목록: 이 사이만 고치면 됩니�
 <script>window.JOB_LIST = \`
 ${[header, ...rows.map(esc)].join('\n')}
 \`;</script>
-<!-- ▲▲▲ 직무 목록 끝 ▲▲▲ -->`;
+<!-- ▲▲▲ 직무 목록 끝 ▲▲▲ -->
+<!-- ▼▼▼ 역할 목록: 이 사이만 고치면 됩니다 ▼▼▼
+  · 한 줄에 역할 하나: 직무, 역할 순서 (탭으로 구분). 직무 칸은 위 직무 목록의 '직무' 이름 그대로 (또는 '직렬' 이름).
+  · 직무 칸을 '리더'로 적으면 팀장·실장이 체크하는 리더 역할을 바꿀 수 있습니다.
+  · 비어 있으면 교육 직무는 기본 교육기획 역할, 팀장·실장은 기본 리더 역할을 씁니다. -->
+<script>window.ROLE_LIST = \`
+${['직무\t역할', ...roleRows.map(esc)].join('\n')}
+\`;</script>
+<!-- ▲▲▲ 역할 목록 끝 ▲▲▲ -->`;
 mkdirSync('dist', { recursive: true });
 writeFileSync(outFile, `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -51,4 +63,4 @@ ${page.replace('<div id="root"></div>', '</head><body><div id="root"></div>')}
 </body></html>`);
 // 2) 페이지 본문만 있는 버전 (아티팩트 게시용)
 writeFileSync('dist/artifact.html', page);
-console.log('built', outFile, (readFileSync(outFile).length / 1024).toFixed(0) + 'KB', `직무 ${rows.length}줄`);
+console.log('built', outFile, (readFileSync(outFile).length / 1024).toFixed(0) + 'KB', `직무 ${rows.length}줄 · 역할 ${roleRows.length}줄`);

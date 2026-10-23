@@ -104,7 +104,7 @@ export default function Diagnosis() {
         </ul>
       </details>
 
-      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: 4 })} onNext={() => startSim()} nextLabel="AI 도입 시뮬레이션 시작" />
+      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: 5 })} onNext={() => startSim()} nextLabel="AI 도입 시뮬레이션 시작" />
     </section>
   );
 }

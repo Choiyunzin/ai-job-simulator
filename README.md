@@ -25,6 +25,9 @@ node scripts/build-single.mjs --list 목록.tsv --out ai-job-simulator-사내.ht
 
 **사내 목록이 들어간 파일과 목록 파일은 이 저장소에 올리지 마세요.** (`*.tsv`, `*-사내.html`은 `.gitignore`에 들어 있습니다.)
 목록 칸이 비어 있으면 기본 직무 목록으로 동작합니다.
+
+**역할 진단(Q.R)**: 직무 목록 아래 '역할 목록' 칸에 `직무<탭>역할`을 한 줄씩 넣으면, 고른 직무(없으면 직렬)의 역할을 5점 척도로 체크합니다. 직무 칸을 `리더`로 적으면 팀장·실장용 리더 역할을 바꿀 수 있습니다. 비어 있으면 교육 직무는 기본 교육기획 역할 5개, 팀장·실장은 기본 리더 역할 6개를 씁니다. 체크한 역할은 Q.B에서 업무로 불러올 수 있고, 리포트에 강점(4~5점)·보완 필요(1~2점)로 정리됩니다.
+사내용 파일 만들기: `node scripts/build-single.mjs --list 목록.tsv --roles 역할.tsv --out ai-job-simulator-사내.html`
 고른 직무 경로에 '교육'이 들어가면 교육 직무용 예시 업무와 재투자 항목이 나옵니다.
 
 ## 2. 개발 환경에서 실행
@@ -49,14 +52,15 @@ src/
 │  └─ diagnose.ts       유형 판정, TOP3, 병목, 상황 카드 추천, 주의사항, 다음 실험
 ├─ steps/               6단계 화면
 │  ├─ Intro.tsx         STEP 1 인트로
-│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A~Q.I, 8개 질문 화면 · 업무는 비율(%)로 입력)
+│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A·Q.R 역할 진단·Q.B~Q.I, 9개 질문 화면 · 업무는 비율(%)로 입력)
 │  ├─ Diagnosis.tsx     STEP 3 AI 업무 유형 진단
 │  ├─ Simulation.tsx    STEP 4 전후 시뮬레이션 (흐름 애니메이션, 3개 결과 비교, 시간 조정)
 │  ├─ Events.tsx        STEP 5 상황 대응 게임 (파일명은 Events 그대로)
 │  └─ Future.tsx        STEP 6 미래의 나 (대시보드, 재투자, 리포트, 내보내기)
 ├─ components/WorkweekSim.tsx  '주당 근무시간이 ○○시간이라면?' 시뮬레이터
 ├─ components/viz.tsx   카운트업, 누적 막대, 도넛, 구성 막대, 점수 막대
-├─ jobCatalog.ts        사내 직무 목록 읽기·4단 선택
+├─ jobCatalog.ts        사내 직무 목록 읽기·4단 선택, 직급·직책 표시
+├─ roleCatalog.ts       역할 목록 읽기·역할 진단(Q.R)
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장
 ├─ useResults.ts        상태 → 계산 결과 (입력이 바뀌면 즉시 재계산)
 ├─ report.ts            JSON / CSV / 텍스트 리포트 생성

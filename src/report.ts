@@ -3,6 +3,8 @@ import { ARCHETYPES, ENV, EVENTS, LABELS, REDESIGN, REINVEST } from './engine/co
 import { cautions, nextExperiment } from './engine/diagnose';
 import type { EventId, RedesignToggle } from './engine/types';
 import { careerLabel, jobLabel } from './jobCatalog';
+import { currentRoles, readRoles, roleSummary } from './roleCatalog';
+import { ROLE_SCALE } from './engine/config';
 import { savingsSentence } from './components/WorkweekSim';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
@@ -41,6 +43,12 @@ export function buildReport(s: AppState, res: Res) {
     archetypeScores: Object.fromEntries(Object.entries(dx.scores).map(([k, v]) => [ARCHETYPES[k as keyof typeof ARCHETYPES].name, r2(v)])),
     summary: dx.sentence,
     topTasks: dx.topTasks.map((t) => ({ name: t.name, savedHoursPerWeek: r2(t.savedHours) })),
+    roles: currentRoles(s.profile, readRoles()).map((x) => ({
+      role: x.role, group: x.group === 'job' ? '직무 역할' : x.group === 'leader' ? '리더 역할' : '직접 추가',
+      score: x.score, level: x.score ? ROLE_SCALE[x.score - 1] : null,
+    })),
+    roleStrengths: roleSummary(currentRoles(s.profile, readRoles())).strengths.map((x) => x.role),
+    roleGaps: roleSummary(currentRoles(s.profile, readRoles())).gaps.map((x) => x.role),
     bottlenecks: dx.bottlenecks.map((b) => ({ name: b.label, hoursPerWeek: r2(b.hours) })),
     totals: {
       beforeHours: r2(T.beforeLabor),
@@ -92,6 +100,7 @@ export function toCSV(r: Report): string {
   lines.push(`기본,Pay Grade,${esc(r.career.payGrade ?? '')}`);
   lines.push(`기본,연차,${r.career.years ?? ''}`);
   lines.push(`요약,AI 업무 유형,${esc(r.archetype)}`);
+  r.roles.forEach((x) => lines.push(`역할 진단(${esc(x.group)}),${esc(x.role)},${x.score ?? ''}`));
   const tl: [string, number][] = [
     ['AI 도입 전 주당 시간', r.totals.beforeHours], ['AI 도입 후 주당 시간', r.totals.afterAiHours],
     ['재설계 후 주당 시간', r.totals.redesignHours], ['순절감 시간', r.totals.savedHoursSameVolume],
@@ -130,6 +139,10 @@ export function toText(r: Report): string {
     `· [주 ${r.weeklyHours}시간 근무 기준] AI 도입 전 ${r.totals.beforeHours}h → AI 도입 후 ${r.totals.afterAiHours}h → 재설계 후 ${r.totals.redesignHours}h (주당, 같은 업무량)`,
     `· 순절감 ${r.totals.savedHoursSameVolume}h (${r.totals.savingRatePct}%), 늘어난 요청 처리 ${r.totals.extraVolumeHours}h, 재투자 가능 ${r.totals.reinvestableHours}h`,
     `· 품질 ${r.totals.qualityBefore}→${r.totals.qualityAfter}점, 위험 ${r.totals.riskBefore}→${r.totals.riskAfter}점`,
+    ...(r.roles.some((x) => x.score) ? [
+      `· 강점 역할: ${r.roleStrengths.join(', ') || '없음'}`,
+      `· 보완이 필요한 역할: ${r.roleGaps.join(', ') || '없음'}`,
+    ] : []),
     `· 잠재력 TOP3: ${r.topTasks.map((t) => t.name).join(', ')}`,
     `· 병목 TOP2: ${r.bottlenecks.map((b) => b.name).join(', ')}`,
     `· 가장 효과적인 선택: ${r.mostEffective ?? '없음'}`,

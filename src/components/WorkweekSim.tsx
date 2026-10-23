@@ -24,7 +24,7 @@ export function WorkweekSim({ hours, onChange, redesign, after, bands }: {
 }) {
   const T = redesign.totals;
   const saved = T.savedSameVolume;
-  const negative = saved < 0;
+  const negative = saved <= -0.05;
   const set = (v: number) => onChange(Math.max(MIN_H, Math.min(MAX_H, Math.round(v) || 40)));
 
   return (
@@ -55,7 +55,7 @@ export function WorkweekSim({ hours, onChange, redesign, after, bands }: {
           <li key={b.base} className={b.base === hours ? 'on' : ''}>
             <button onClick={() => set(b.base)}>
               <span>주 {b.base}시간이라면</span>
-              <b className="num">{h1(Math.abs(b.redesignSaved))}시간 {b.redesignSaved < 0 ? '증가' : '절감'}</b>
+              <b className="num">{Math.abs(b.redesignSaved) < 0.05 ? '변화 거의 없음' : `${h1(Math.abs(b.redesignSaved))}시간 ${b.redesignSaved < 0 ? '증가' : '절감'}`}</b>
             </button>
           </li>
         ))}

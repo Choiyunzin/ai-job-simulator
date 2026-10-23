@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { StepNav } from '../App';
 import { ARCHETYPES, REINVEST } from '../engine/config';
 import { careerLabel, jobLabel } from '../jobCatalog';
+import { currentRoles, roleSummary, useRoleCatalog } from '../roleCatalog';
 import { cautions, nextExperiment } from '../engine/diagnose';
 import { fmtH } from '../engine/simulate';
 import { Composition, CountUp, Delta, Donut, type Segment } from '../components/viz';
@@ -17,6 +18,8 @@ const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#
 export default function Future() {
   const { s, d } = useApp();
   const res = useResults();
+  const roleRows = useRoleCatalog();
+  const roles = roleSummary(currentRoles(s.profile, roleRows));
   const { after, redesign, dx, contrib, bands } = res;
   const T = redesign.totals;
   const free = Math.max(0, T.freeTime);
@@ -140,6 +143,16 @@ export default function Future() {
             <p className="big num">주 {fmtH(T.savedSameVolume)}<small> ({T.savingRate.toFixed(1)}%)</small></p>
             <small className="num">{bands.map((b) => `주 ${b.base}시간이라면 ${fmtH(b.redesignSaved)}`).join(' · ')}</small>
           </div>
+          {roles.rated.length > 0 && (
+            <div className="wide">
+              <h4>역할 진단 <small>(5점 척도 · {roles.rated.length}개 체크)</small></h4>
+              <div className="role-sum">
+                <p><b>강점</b>{roles.strengths.length ? roles.strengths.map((x) => `${x.role}(${x.score})`).join(' · ') : '4점 이상인 역할이 아직 없어요'}</p>
+                <p><b>보완 필요</b>{roles.gaps.length ? roles.gaps.map((x) => `${x.role}(${x.score})`).join(' · ') : '2점 이하인 역할이 없어요'}</p>
+                {roles.gaps.length > 0 && <small>보완이 필요한 역할은 AI의 도움을 먼저 받아볼 후보예요. 자료 조사·초안 작성부터 시작해 보세요.</small>}
+              </div>
+            </div>
+          )}
           <div>
             <h4>가장 효과적이었던 재설계 선택 <small>(성공 기준 가중)</small></h4>
             <p>{best && best.score > 0.01 ? <>{best.label}<small className="num"> · 노동 {sgn(-best.hours)}{fmtH(Math.abs(best.hours))} · 대기 {sgn(-best.wait)}{fmtH(Math.abs(best.wait))} · 품질 {sgn(best.quality)}{Math.abs(best.quality).toFixed(1)}점 · 위험 {sgn(-best.risk)}{Math.abs(best.risk).toFixed(1)}점</small></> : '아직 효과를 낸 재설계 선택이 없습니다.'}</p>
@@ -185,7 +198,7 @@ export default function Future() {
       <div className="endbar">
         <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>🎲 다른 상황으로 다시 해보기</button>
         <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>↻ 시뮬레이션 다시 보기</button>
-        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 1 })}>✎ 업무 수정하기</button>
+        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>✎ 업무 수정하기</button>
       </div>
       <StepNav onPrev={() => d({ type: 'go', step: 4 })} />
     </section>

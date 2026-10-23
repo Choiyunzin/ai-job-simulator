@@ -38,7 +38,7 @@ export default function Simulation() {
   const rr = redesign.tasks.find((r) => r.task.id === taskId);
   if (!ra || !rr) {
     return <section><p>시뮬레이션할 업무가 없습니다. 업무 프로파일에서 업무를 추가해 주세요.</p>
-      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: 1 })} /></section>;
+      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: 2 })} /></section>;
   }
   const k = unit === 'each' ? ra.occurrencesPerWeek : 1;
   const uLabel = unit === 'each' ? '건당' : '주당';

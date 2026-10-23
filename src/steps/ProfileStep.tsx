@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { StepNav } from '../App';
-import { CAREER, EDU_EXAMPLES, ENV, LABELS, TYPE_PROFILE } from '../engine/config';
+import { CAREER, EDU_EXAMPLES, ENV, LABELS, ROLE_SCALE, TYPE_PROFILE } from '../engine/config';
 import type {
   AiLevel, AiTool, Applicability, ApprovalSteps, LearningTime, PersonalData, TeamCulture, Concern, Criterion, Difficulty, Frequency, Importance, JobId, Task, TaskType,
 } from '../engine/types';
 import { useApp } from '../state';
 import { LEVELS, isEduPath, optionsAt, useJobCatalog, yearsLabel } from '../jobCatalog';
+import { currentRoles, isLeader, useRoleCatalog, type RoleRating } from '../roleCatalog';
 
-const SUBS = ['직무', '업무 정의', 'AI 활용 수준', 'AI 적용 가능성', '성공 기준·걱정', '승인·자료', 'AI 활용 환경', '나의 이야기'];
-const CODES = ['QA', 'QB', 'QC', 'QD', 'QE·F', 'QG', 'QH', 'QI'];
+const SUBS = ['직무', '나의 역할', '업무 정의', 'AI 활용 수준', 'AI 적용 가능성', '성공 기준·걱정', '승인·자료', 'AI 활용 환경', '나의 이야기'];
+const CODES = ['QA', 'QR', 'QB', 'QC', 'QD', 'QE·F', 'QG', 'QH', 'QI'];
 
 export const taskError = (t: Task): string | null => {
   if (!t.name.trim()) return '업무명을 입력해 주세요.';
@@ -33,11 +34,11 @@ export default function ProfileStep() {
 
   const catalog = useJobCatalog();
   const useList = catalog.rows.length > 0;
-  const bodies = [<QJob key="a" catalog={catalog} />, <QTasks key="b" />, <QLevel key="c" />, <QApplicability key="d" />, <QCriteria key="e" />,
+  const bodies = [<QJob key="a" catalog={catalog} />, <QRoles key="r" />, <QTasks key="b" />, <QLevel key="c" />, <QApplicability key="d" />, <QCriteria key="e" />,
     <QApproval key="g" />, <QAiEnv key="h" />, <QStory key="i" />];
   const jobOk = useList ? s.profile.jobPath.length === 4 : s.profile.job !== 'other' || !!s.profile.jobOther.trim();
-  const canNext = sub === 1 ? tasksOk : sub === 0 ? jobOk : true;
-  const hint = sub === 1 && !tasksOk
+  const canNext = sub === 2 ? tasksOk : sub === 0 ? jobOk : true;
+  const hint = sub === 2 && !tasksOk
     ? (tasks.length === 0 ? '업무를 1개 이상 추가해 주세요.' : shareTotal > 100 ? '업무 비율 합계가 100%를 넘지 않게 조정해 주세요.' : '빨간 표시가 있는 업무를 확인해 주세요.')
     : sub === 0 && !canNext ? (useList ? '직군부터 직무까지 차례로 골라 주세요.' : '직무를 직접 입력해 주세요.') : undefined;
 
@@ -46,7 +47,7 @@ export default function ProfileStep() {
       <div className="sub-progress" aria-label="질문 진행" ref={subNav}>
         {SUBS.map((x, i) => (
           <button key={x} className={i === sub ? 'now' : i < sub ? 'done' : ''}
-            disabled={i > 1 && !tasksOk} onClick={() => go(i)}>
+            disabled={i > 2 && !tasksOk} onClick={() => go(i)}>
             <span className="num">{CODES[i]}</span>{x}
           </button>
         ))}
@@ -199,6 +200,87 @@ function Seg<T extends string>({ value, options, onChange, name }: {
   );
 }
 
+/** Q.R 역할 진단: 직무 역할(+ 팀장·실장은 리더 역할)을 5점 척도로 체크 */
+function QRoles() {
+  const { s, d } = useApp();
+  const rows = useRoleCatalog();
+  const p = s.profile;
+  const list = currentRoles(p, rows);
+  const [draft, setDraft] = useState('');
+  const rate = (role: string, score: number) => {
+    const next = { ...p.roleRatings };
+    if (next[role] === score) delete next[role]; else next[role] = score;
+    d({ type: 'profile', patch: { roleRatings: next } });
+  };
+  const custom = p.customRoles ?? [];
+  const canAdd = draft.trim().length > 0 && custom.length < 8 && !list.some((r) => r.role === draft.trim());
+  const add = () => { if (canAdd) { d({ type: 'profile', patch: { customRoles: [...custom, draft.trim()] } }); setDraft(''); } };
+  const remove = (role: string) => {
+    const next = { ...p.roleRatings }; delete next[role];
+    d({ type: 'profile', patch: { customRoles: custom.filter((x) => x !== role), roleRatings: next } });
+  };
+  const job = list.filter((r) => r.group === 'job');
+  const leader = list.filter((r) => r.group === 'leader');
+  const mine = list.filter((r) => r.group === 'custom');
+  const rated = list.filter((r) => r.score !== null).length;
+  const jobName = p.jobPath.length === 4 ? p.jobPath[3] : p.job === 'other' ? (p.jobOther || '내 직무') : LABELS.job[p.job];
+
+  return (
+    <div className="qcard wide">
+      <QHead code="Q.R" title="내 역할을 얼마나 잘하고 있나요?"
+        desc={`직무의 핵심 역할마다 지금 내 수준을 골라 주세요.${isLeader(p) ? ' 팀장·실장은 리더 역할도 함께 체크합니다.' : ''} 정답은 없으며, 결과는 리포트의 강점·보완 역할로 정리됩니다.`} />
+      <div className="role-legend" aria-hidden="true">
+        {ROLE_SCALE.map((l, i) => <span key={l}><b className="num">{i + 1}</b>{l}</span>)}
+        <small className="num">{rated} / {list.length}개 체크</small>
+      </div>
+
+      <RoleGroup title="직무 역할" sub={jobName} items={job} onRate={rate}
+        empty="이 직무의 역할 목록이 아직 없어요. 아래에 내 역할을 직접 추가해 체크해 보세요." />
+      {leader.length > 0 && <RoleGroup title="리더 역할" sub={p.career.position} items={leader} onRate={rate} />}
+      {mine.length > 0 && <RoleGroup title="직접 추가한 역할" items={mine} onRate={rate} onRemove={remove} />}
+
+      <div className="field">
+        <label htmlFor="role-add">역할 직접 추가 <small>목록에 없는 내 역할 (최대 8개)</small></label>
+        <div className="range-row">
+          <input id="role-add" value={draft} maxLength={40} placeholder="예: 사내 강사 양성 프로그램 운영"
+            onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
+          <button className="btn" disabled={!canAdd} onClick={add}>추가</button>
+        </div>
+      </div>
+      <small>체크는 선택 사항입니다. 체크한 역할은 다음 질문에서 업무로 바로 불러올 수 있어요. 같은 점수를 다시 누르면 지워집니다.</small>
+    </div>
+  );
+}
+
+function RoleGroup({ title, sub, items, onRate, onRemove, empty }: {
+  title: string; sub?: string; items: RoleRating[]; onRate: (role: string, score: number) => void;
+  onRemove?: (role: string) => void; empty?: string;
+}) {
+  return (
+    <div className="role-group">
+      <h3>{title}{sub && <small> · {sub}</small>}</h3>
+      {items.length === 0 && empty && <p className="fine">{empty}</p>}
+      <ul className="role-list">
+        {items.map((r) => (
+          <li key={r.role} className={r.score !== null ? 'rated' : ''}>
+            <span className="role-name">{r.role}
+              {onRemove && <button className="btn tiny ghost" aria-label={`${r.role} 삭제`} onClick={() => onRemove(r.role)}>삭제</button>}
+            </span>
+            <span className="role-scale" role="radiogroup" aria-label={`${r.role} 수준`}>
+              {ROLE_SCALE.map((label, i) => (
+                <button key={label} role="radio" aria-checked={r.score === i + 1} title={label}
+                  className={r.score === i + 1 ? 'on' : ''} onClick={() => onRate(r.role, i + 1)}>
+                  <b className="num">{i + 1}</b><small>{label}</small>
+                </button>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function QTasks() {
   const { s, d } = useApp();
   const tasks = s.profile.tasks;
@@ -208,6 +290,8 @@ function QTasks() {
   const [open, setOpen] = useState<string | null>(tasks[tasks.length - 1]?.id ?? null);
   const names = new Set(tasks.map((t) => t.name));
   const examples = EDU_EXAMPLES.filter((e) => !names.has(e.name));
+  const roleRows = useRoleCatalog();
+  const roleChoices = currentRoles(s.profile, roleRows).filter((r) => !names.has(r.role.slice(0, 30)));
 
   return (
     <div className="qcard wide">
@@ -223,6 +307,19 @@ function QTasks() {
           ? <p className="warn">⚠ 합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄여 주세요.</p>
           : <small>비율은 추정치여도 괜찮습니다. 나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다. 시간 환산은 마지막 단계에서 근무시간을 바꿔 가며 해볼 수 있어요.</small>}
       </div>
+
+      {roleChoices.length > 0 && tasks.length < 5 && (
+        <div className="examples">
+          <span className="ex-label">나의 역할에서 불러오기 <small>(Q.R에서 체크한 역할 · 점수)</small></span>
+          <div className="chips">
+            {roleChoices.map((r) => (
+              <button key={r.role} className="chip add" onClick={() => d({ type: 'addTask', task: { name: r.role.slice(0, 30), share: 10 } })}>
+                + {r.role}{r.score !== null && <span className="chip-score num"> {r.score}점</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {s.profile.job === 'edu' && examples.length > 0 && tasks.length < 5 && (
         <div className="examples">

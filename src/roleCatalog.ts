@@ -30,7 +30,7 @@ export function parseRoleList(text: string): RoleRow[] {
   return rows;
 }
 
-function readRoles(): RoleRow[] {
+export function readRoles(): RoleRow[] {
   try { return typeof window.ROLE_LIST === 'string' ? parseRoleList(window.ROLE_LIST) : []; } catch { return []; }
 }
 
