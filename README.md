@@ -30,6 +30,8 @@ node scripts/build-single.mjs --list 목록.tsv --out ai-job-simulator-사내.ht
 **표준 Task·글로벌 연구 기준 진단(v2)**: HTML 맨 위 세 번째 칸 '표준 Task 목록'에 직무별 표준 업무를 탭 구분 13칸(직무, Task ID, Task 문장, 업무 유형, McKinsey 활동 유형, O*NET 직업 코드, O*NET Task/DWA, 대응 수준, 노출 등급 E0/E1/E2, 채점 근거, 채점 방식, Anthropic 자동화형 비중, 기준일)으로 넣으면, Q.B에서 표준 업무를 고를 수 있고 STEP 3에 연구 기준 진단 카드(노출도·사내 실현 가능·활용도·역량 갭·인프라 갭·4분면)가 나옵니다. 양식은 `templates/표준Task_예시_교육기획.tsv`(예시, 채점 검토 전). 연구 근거값·초기 가정값은 `src/engine/config.ts` 하단(v2)에서 관리합니다.
 
 사내용 파일 만들기: `node scripts/build-single.mjs --list 목록.tsv --roles 역할.tsv --tasks 표준Task.tsv --out ai-job-simulator-사내.html`
+
+**결과 제출(SharePoint 엑셀 자동 적재)**: HTML 맨 위 '결과 제출 설정' 칸에 Power Automate 'HTTP 요청을 받은 경우' 흐름 주소(`SUBMIT_URL`)와 키(`SUBMIT_KEY`)를 넣으면 STEP 6에 '결과 제출하기' 카드가 나타나고, 동의 후 익명 결과(이름·사번 없음, 연차는 구간)가 흐름으로 전송됩니다. 주소가 비어 있으면 카드가 보이지 않습니다. 전송 형식은 `src/submit.ts`, 빌드 옵션은 `--submit-url`·`--submit-key`.
 고른 직무 경로에 '교육'이 들어가면 교육 직무용 예시 업무와 재투자 항목이 나옵니다.
 
 ## 2. 개발 환경에서 실행
@@ -64,6 +66,8 @@ src/
 ├─ jobCatalog.ts        사내 직무 목록 읽기·4단 선택, 직급·직책 표시
 ├─ roleCatalog.ts       역할 목록 읽기·역할 진단(Q.R)
 ├─ taskCatalog.ts       표준 Task 목록 읽기(F-21)
+├─ submit.ts            결과 제출(Power Automate 전송)
+├─ components/SubmitCard.tsx  STEP 6 결과 제출 카드
 ├─ engine/research.ts   글로벌 연구 기준 진단 계산(F-22)
 ├─ components/ResearchCard.tsx  STEP 3 연구 기준 진단 카드
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장

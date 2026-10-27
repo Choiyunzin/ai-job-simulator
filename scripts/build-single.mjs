@@ -1,6 +1,6 @@
 // Vite 없이 esbuild만으로 '파일 하나짜리 HTML'을 만드는 스크립트
 // 사용: node scripts/build-single.mjs  → dist/ai-job-simulator.html (직무 목록 칸은 비어 있음)
-//      node scripts/build-single.mjs --list 목록.tsv [--roles 역할.tsv] [--tasks 표준Task.tsv] --out 사내용.html  → 직무·역할 목록을 넣은 사내 배포용 HTML
+//      node scripts/build-single.mjs --list 목록.tsv [--roles 역할.tsv] [--tasks 표준Task.tsv] [--submit-url URL --submit-key 키] --out 사내용.html  → 직무·역할 목록을 넣은 사내 배포용 HTML
 //      (사내용 파일은 저장소에 올리지 마세요)
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -9,6 +9,8 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const listFile = arg('--list');
 const rolesFile = arg('--roles');
 const tasksFile = arg('--tasks');
+const submitUrlArg = arg('--submit-url') ?? '';
+const submitKeyArg = arg('--submit-key') ?? '';
 const outFile = arg('--out') ?? 'dist/ai-job-simulator.html';
 
 const result = await build({
@@ -69,7 +71,13 @@ ${['직무\t역할', ...roleRows.map(esc)].join('\n')}
 <script>window.TASK_LIST = \`
 ${[TASK_HEADER, ...taskRows.map(esc)].join('\n')}
 \`;</script>
-<!-- ▲▲▲ 표준 Task 목록 끝 ▲▲▲ -->`;
+<!-- ▲▲▲ 표준 Task 목록 끝 ▲▲▲ -->
+<!-- ▼▼▼ 결과 제출 설정: 이 두 줄만 고치면 됩니다 ▼▼▼
+  · SUBMIT_URL: Power Automate 'HTTP 요청을 받았을 때' 흐름의 주소(https://…)를 따옴표 안에 붙여넣으세요.
+  · SUBMIT_KEY: 흐름의 '키 확인' 조건과 같은 값을 적으세요(형식이 다른 데이터를 걸러내는 용도).
+  · 주소가 비어 있으면 '결과 제출하기' 카드가 나타나지 않습니다. -->
+<script>window.SUBMIT_URL = "${submitUrlArg.replace(/"/g, '')}"; window.SUBMIT_KEY = "${submitKeyArg.replace(/"/g, '')}";</script>
+<!-- ▲▲▲ 결과 제출 설정 끝 ▲▲▲ -->`;
 mkdirSync('dist', { recursive: true });
 writeFileSync(outFile, `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

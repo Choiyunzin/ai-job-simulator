@@ -614,3 +614,11 @@ textarea { resize: vertical; line-height: 1.55; }
 .rc-r-nums { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--fg-dim); }
 .rc-r-nums b { color: var(--fg); font-size: 16px; margin-left: 4px; }
 .rc-research p { font-size: 13.5px; }
+
+/* ── 결과 제출 ── */
+.submit-card { border-color: rgba(47, 107, 255, 0.35); }
+.submit-what { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: var(--fg-dim); }
+.submit-what b { color: var(--fg); margin-right: 6px; }
+.agree { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.agree input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--blue); flex: none; }
+@media print { .submit-card { display: none !important; } }

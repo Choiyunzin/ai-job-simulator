@@ -5,6 +5,7 @@ import { careerLabel, jobLabel } from '../jobCatalog';
 import { RESEARCH_SOURCES, RESEARCH_DATA_DATE } from '../engine/config';
 import { QUADRANT_INFO, CONFIDENCE_LABEL, pct, researchDiagnosis } from '../engine/research';
 import { RESEARCH_NOTICE } from '../components/ResearchCard';
+import { SubmitCard } from '../components/SubmitCard';
 import { currentRoles, roleSummary, useRoleCatalog } from '../roleCatalog';
 import { cautions, nextExperiment } from '../engine/diagnose';
 import { fmtH } from '../engine/simulate';
@@ -194,6 +195,7 @@ export default function Future() {
         <p className="fine">연구 출처: {RESEARCH_SOURCES.join(' / ')} · 데이터 기준: {RESEARCH_DATA_DATE}</p>
       </div>
 
+      <SubmitCard state={s} report={report} />
       <Exports json={JSON.stringify(report, null, 2)} csv={toCSV(report)} text={toText(report)} />
 
       <details className="basis">
