@@ -11,7 +11,7 @@ import {
   ACTIVITY, ACTIVITY_KEYS, QUADRANT_INFO, SKILL_LEVELS, Y_MID, buildInsights, computeWorkMap, levelDesc, useSkillCatalog,
   type Quadrant, type TaskMatch, type WorkMap,
 } from '../workmap';
-import { LAST_SUB, REFLECT } from './ProfileStep';
+import { LAST_SUB } from './ProfileStep';
 
 export const MODULES = [
   { key: 'status', no: '01', title: '직무현황', sub: '직무가 어떻게 이루어져 있나' },
@@ -61,9 +61,6 @@ export default function WorkReport() {
         <div>
           <small>{[jobLabel(p), meta].filter(Boolean).join(' · ')}</small>
           <h1>{headline(m)}</h1>
-          {p.reflect !== null && p.reflect <= 2 && (
-            <p className="warn">응답이 내 업무를 '{REFLECT[p.reflect - 1]}'이라고 답했어요. 결과는 참고용으로 읽고, 필요하면 응답을 고쳐 보세요.</p>
-          )}
         </div>
         <button className="btn ghost" onClick={() => setGuide(true)}>해석법 보기</button>
       </div>

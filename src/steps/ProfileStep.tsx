@@ -12,8 +12,8 @@ import { ACTIVITY, ACTIVITY_KEYS, SKILL_LEVELS, activityOf, levelDesc, skillsFor
 import { ReadingGuide } from '../components/ReadingGuide';
 import { currentRoles, isLeader, useRoleCatalog, type RoleRating } from '../roleCatalog';
 
-const SUBS = ['직무', '나의 역할', '업무 고르기', '업무 구체화', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '응답 반영도'];
-const CODES = ['QA', 'QR', 'QB1', 'QB2', 'QS', 'QC', 'QD', 'QH', 'QI'];
+const SUBS = ['직무', '나의 역할', '업무 고르기', '업무 구체화', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경'];
+const CODES = ['QA', 'QR', 'QB1', 'QB2', 'QS', 'QC', 'QD', 'QH'];
 /** 화면 번호 */
 export const SUB = { job: 0, roles: 1, pick: 2, detail: 3 } as const;
 export const LAST_SUB = SUBS.length - 1;
@@ -44,7 +44,7 @@ export default function ProfileStep() {
   const [guide, setGuide] = useState(false);
   const useList = catalog.rows.length > 0;
   const bodies = [<QJob key="a" catalog={catalog} />, <QRoles key="r" />, <QTasks key="b" />, <QTaskDetail key="b2" />, <QSkills key="s" />, <QLevel key="c" />, <QApplicability key="d" />,
-    <QAiEnv key="h" />, <QStory key="i" />];
+    <QAiEnv key="h" />];
   const jobOk = useList ? s.profile.jobPath.length === 4 : s.profile.job !== 'other' || !!s.profile.jobOther.trim();
   const c = s.profile.career;
   const positionOk = c.leader === 'no' || (c.leader === 'yes' && LEADER_POSITIONS.includes(c.position));
@@ -751,24 +751,6 @@ function QAiEnv() {
       <QHead code="Q.H-3" title="일주일에 AI를 익히는 데 쓸 수 있는 시간은?" desc="꾸준히 익힐수록 AI 결과물을 고치는 시간이 줄어든다고 가정합니다." />
       <OptionCards<LearningTime> name="AI 학습 가능 시간" value={env.learning} options={ENV.learning}
         onChange={(v) => d({ type: 'env', patch: { learning: v } })} />
-    </div>
-  );
-}
-
-/** 마지막 질문: 응답 반영도 */
-function QStory() {
-  const { s, d } = useApp();
-  return (
-    <div className="qcard wide">
-      <QHead code="Q.I" title="이번 진단 응답이 나의 업무를 얼마나 잘 반영하나요?" desc="진단 결과를 읽을 때 참고하고, 진단 문항을 개선하는 데 씁니다." />
-      <div className="seg reflect" role="radiogroup" aria-label="응답 반영 정도">
-        {REFLECT.map((l, i) => (
-          <button key={l} role="radio" aria-checked={s.profile.reflect === i + 1} className={s.profile.reflect === i + 1 ? 'on' : ''}
-            onClick={() => d({ type: 'profile', patch: { reflect: s.profile.reflect === i + 1 ? null : i + 1 } })}>
-            <b className="num">{i + 1}</b> {l}
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
