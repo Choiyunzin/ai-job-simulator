@@ -45,8 +45,8 @@ export function ReadingGuide({ onClose, onConfirm, confirmLabel = '진단 결과
         <span className="eyebrow">How to read</span>
         <h2 id="guide-title">AI와 함께 일하기 시뮬레이터 해석법</h2>
         <p className="guide-lead">
-          본 결과는 정답을 말하지 않습니다. 본인의 일을 데이터로 들여다보고,
-          지금 하는 일의 의미와 인사이트를 찾아가는 <b>출발점</b>입니다. 세 가지 시선으로 읽어 보세요.
+          이 결과는 정답이나 평가가 아닙니다. 내 일을 데이터로 비춰 보며 지금 하는 일의 의미를 되짚고,
+          다음에 해 볼 일을 찾는 <b>출발점</b>입니다. 아래 세 가지 시선으로 읽어 보세요.
         </p>
         <ol className="lenses">
           {LENSES.map((l) => (

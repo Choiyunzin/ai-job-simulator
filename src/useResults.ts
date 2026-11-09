@@ -7,8 +7,8 @@ import type { EventId, Overrides, Profile } from './engine/types';
 import { hoursOf, useApp } from './state';
 
 export const COLORS = {
-  direct: '#6b6457', review: '#b9ae96', prompt: '#d64816', manual: '#6b6457',
-  aiReview: '#ef9a72', rework: '#1c1914', maint: '#7d93c4', extra: '#3d382f', overhead: '#d9d1bf',
+  direct: '#7A8BB0', review: '#E0A458', prompt: '#4F86F7', manual: '#7A8BB0',
+  aiReview: '#E8B86A', rework: '#E57373', maint: '#8A6CF0', extra: '#3FB09C', overhead: '#C792EA',
 };
 
 /** 같은 업무 비율을 다른 기준 근무시간으로 환산 (사용자가 조정한 시간값도 같은 비율로 환산) */

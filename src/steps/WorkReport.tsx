@@ -46,7 +46,6 @@ export default function WorkReport() {
   const goMod = (i: number) => { setMod(i); top.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
   const p = s.profile;
   const meta = [p.dept, p.teamSize && `팀 ${p.teamSize}`, careerLabel(p)].filter(Boolean).join(' · ');
-  const today = useMemo(() => { const t = new Date(); return `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, '0')}.${String(t.getDate()).padStart(2, '0')}`; }, []);
 
   return (
     <section className="wr">
@@ -59,17 +58,7 @@ export default function WorkReport() {
             <p className="warn">응답이 내 업무를 '{REFLECT[p.reflect - 1]}'이라고 답했어요. 결과는 참고용으로 읽고, 필요하면 응답을 고쳐 보세요.</p>
           )}
         </div>
-        <div className="wr-side">
-          <dl className="title-block" aria-label="도면 표제란">
-            <div><dt>소속</dt><dd>{p.dept || '—'}</dd></div>
-            <div><dt>팀 인원</dt><dd>{p.teamSize || '—'}</dd></div>
-            <div className="wide"><dt>직무</dt><dd>{p.jobPath.length === 4 ? p.jobPath[3] : jobLabel(p)}</dd></div>
-            <div><dt>유형</dt><dd>{m.primary ? ACTIVITY[m.primary].pattern : '—'}</dd></div>
-            <div><dt>작성일</dt><dd className="num">{today}</dd></div>
-            <div className="wide stamp"><dt>도면번호</dt><dd>WM-{today.replace(/\./g, '')}-{String(m.tasks.length).padStart(2, '0')}</dd></div>
-          </dl>
-          <button className="btn ghost" onClick={() => setGuide(true)}>해석법 보기</button>
-        </div>
+        <button className="btn ghost" onClick={() => setGuide(true)}>해석법 보기</button>
       </div>
 
       <div ref={top} className="mod-nav" role="tablist" aria-label="진단 모듈">
