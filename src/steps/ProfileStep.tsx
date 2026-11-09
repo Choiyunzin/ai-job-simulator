@@ -760,7 +760,7 @@ function QStory() {
   const n = s.profile.notes;
   return (
     <div className="qcard wide">
-      <QHead code="Q.I" title="마지막으로, 나의 이야기를 들려주세요" desc="선택 문항입니다. 적은 내용은 최종 리포트에 함께 담기고, 소모임에서 나눌 이야깃거리가 됩니다." />
+      <QHead code="Q.I" title="마지막으로, 나의 이야기를 들려주세요" desc="선택 문항입니다." />
       <div className="field">
         <label htmlFor="note-pain">AI의 도움을 가장 먼저 받고 싶은 업무 고민</label>
         <textarea id="note-pain" rows={3} maxLength={300} value={n.pain}
