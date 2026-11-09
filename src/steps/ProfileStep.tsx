@@ -12,7 +12,7 @@ import { ACTIVITY, ACTIVITY_KEYS, SKILL_LEVELS, activityOf, levelDesc, skillsFor
 import { ReadingGuide } from '../components/ReadingGuide';
 import { currentRoles, isLeader, useRoleCatalog, type RoleRating } from '../roleCatalog';
 
-const SUBS = ['직무', '나의 역할', '업무 고르기', '업무 구체화', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '나의 이야기'];
+const SUBS = ['직무', '나의 역할', '업무 고르기', '업무 구체화', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '응답 반영도'];
 const CODES = ['QA', 'QR', 'QB1', 'QB2', 'QS', 'QC', 'QD', 'QH', 'QI'];
 /** 화면 번호 */
 export const SUB = { job: 0, roles: 1, pick: 2, detail: 3 } as const;
@@ -755,28 +755,12 @@ function QAiEnv() {
   );
 }
 
+/** 마지막 질문: 응답 반영도 */
 function QStory() {
   const { s, d } = useApp();
-  const n = s.profile.notes;
   return (
     <div className="qcard wide">
-      <QHead code="Q.I" title="마지막으로, 나의 이야기를 들려주세요" desc="선택 문항입니다." />
-      <div className="field">
-        <label htmlFor="note-pain">AI의 도움을 가장 먼저 받고 싶은 업무 고민</label>
-        <textarea id="note-pain" rows={3} maxLength={300} value={n.pain}
-          placeholder="예: 과정이 끝날 때마다 만족도 주관식 응답을 하나하나 읽고 분류하는 데 반나절이 걸려요."
-          onChange={(e) => d({ type: 'notes', patch: { pain: e.target.value } })} />
-        <small>{n.pain.length}/300</small>
-      </div>
-      <div className="field">
-        <label htmlFor="note-tips">사내에서 자주 쓰는 AI 도구나 나만의 활용 팁</label>
-        <textarea id="note-tips" rows={3} maxLength={300} value={n.tips}
-          placeholder="예: 사내 GPT로 회의록을 요약하고, Copilot으로 메일 초안을 써요."
-          onChange={(e) => d({ type: 'notes', patch: { tips: e.target.value } })} />
-        <small>{n.tips.length}/300</small>
-      </div>
-      <div className="divider" />
-      <QHead code="Q.I-2" title="이번 진단 응답이 나의 업무를 얼마나 잘 반영하나요?" desc="진단 결과를 읽을 때 참고하고, 진단 문항을 개선하는 데 씁니다." />
+      <QHead code="Q.I" title="이번 진단 응답이 나의 업무를 얼마나 잘 반영하나요?" desc="진단 결과를 읽을 때 참고하고, 진단 문항을 개선하는 데 씁니다." />
       <div className="seg reflect" role="radiogroup" aria-label="응답 반영 정도">
         {REFLECT.map((l, i) => (
           <button key={l} role="radio" aria-checked={s.profile.reflect === i + 1} className={s.profile.reflect === i + 1 ? 'on' : ''}
