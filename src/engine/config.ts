@@ -247,7 +247,7 @@ export interface EventCard {
 
 export const EVENTS: Record<EventId, EventCard> = {
   error: {
-    id: 'error', icon: '⚠', title: '그럴듯한 오류',
+    id: 'error', icon: '', title: '그럴듯한 오류',
     story: 'AI가 보고서에 잘못된 수치를 넣었습니다. 초안은 빨리 완성했지만, 검토와 수정에 추가 시간이 필요합니다.',
     choices: {
       A: { text: '모든 결과를 사람이 처음부터 다시 검토한다.', result: '전수 재검토 체계로 바꿨습니다.',
@@ -259,7 +259,7 @@ export const EVENTS: Record<EventId, EventCard> = {
     },
   },
   demand: {
-    id: 'demand', icon: '📈', title: '요청 폭증',
+    id: 'demand', icon: '', title: '요청 폭증',
     story: 'AI 덕분에 자료 제작이 빨라졌습니다. 이제 다른 부서에서도 추가 제작을 요청하기 시작합니다.',
     choices: {
       A: { text: '들어오는 요청을 모두 처리한다.', result: '모든 요청을 받기로 했습니다.',
@@ -271,7 +271,7 @@ export const EVENTS: Record<EventId, EventCard> = {
     },
   },
   approval: {
-    id: 'approval', icon: '⏳', title: '승인 병목',
+    id: 'approval', icon: '', title: '승인 병목',
     story: 'AI가 초안을 빠르게 생성했지만 최종 승인자는 여전히 한 명입니다. 승인 대기시간이 길어졌습니다.',
     choices: {
       A: { text: '기존 승인 체계를 유지한다.', result: '기존 승인 체계를 유지했습니다.',
@@ -283,7 +283,7 @@ export const EVENTS: Record<EventId, EventCard> = {
     },
   },
   copytrap: {
-    id: 'copytrap', icon: '📄', title: '복붙의 함정',
+    id: 'copytrap', icon: '', title: '복붙의 함정',
     story: 'AI가 많은 결과물을 만들었지만, 실제 업무에서 활용되지 않는 자료가 늘었습니다.',
     choices: {
       A: { text: '제작량을 더 늘린다.', result: '제작량을 늘렸습니다.',
@@ -338,22 +338,22 @@ export const REINVEST: Record<'edu' | 'general', { key: string; label: string }[
 
 export const ARCHETYPES = {
   explorer: {
-    name: 'AI 탐험가', icon: '🧭', tagline: 'AI 활용 기회는 많지만 아직 방식이 정착되지 않은 유형',
+    name: 'AI 탐험가', icon: '', tagline: 'AI 활용 기회는 많지만 아직 방식이 정착되지 않은 유형',
     strength: '어떤 업무에 AI를 쓸지 처음부터 설계할 수 있어 잘못된 습관이 없습니다.',
     growth: '작은 업무 하나를 정해 같은 방식으로 3번 반복해 보는 것이 출발점입니다.',
   },
   partner: {
-    name: 'AI 실무 파트너', icon: '🤝', tagline: '문서 작성·요약·조사 등 개별 업무에서 AI를 자주 쓰는 유형',
+    name: 'AI 실무 파트너', icon: '', tagline: '문서 작성·요약·조사 등 개별 업무에서 AI를 자주 쓰는 유형',
     strength: '초안 작성과 정리 속도에서 이미 효과를 보고 있습니다.',
     growth: '검토와 승인까지 포함한 전체 흐름을 재설계하면 효과가 커집니다.',
   },
   orchestrator: {
-    name: 'AI 오케스트레이터', icon: '🎛', tagline: '여러 작업과 도구를 연결해 업무 흐름 전체를 개선하는 유형',
+    name: 'AI 오케스트레이터', icon: '', tagline: '여러 작업과 도구를 연결해 업무 흐름 전체를 개선하는 유형',
     strength: '업무 사이의 연결과 자동화로 반복을 구조적으로 줄입니다.',
     growth: '연결이 늘수록 관리 부담과 숨은 오류가 함께 늘어나니 점검 지점이 필요합니다.',
   },
   guardian: {
-    name: 'AI 품질 수호자', icon: '🛡', tagline: '검토·정확성·위험관리와 품질을 중요하게 생각하는 유형',
+    name: 'AI 품질 수호자', icon: '', tagline: '검토·정확성·위험관리와 품질을 중요하게 생각하는 유형',
     strength: 'AI 결과물의 오류와 보안 위험을 놓치지 않습니다.',
     growth: '모든 것을 다 검토하기보다 위험도에 따라 검토 깊이를 나누면 시간이 남습니다.',
   },
@@ -366,9 +366,15 @@ export const HOUR_BASES = [40, 52] as const;
 export const CAREER = {
   rank: ['매니저', '책임매니저', '전임연구원', '책임연구원'],
   position: ['없음(팀원)', '팀장', '실장'],
+  leaderPositions: ['팀장', '실장'],
   payGrade: ['G1', 'G2', 'G3', 'G4', 'R1', 'R2', 'R3', 'R4'],
+  /** 근속기간·직무경력 구간 (화면 선택지 그대로 저장·제출) */
+  tenure: ['1년 미만', '1~3년', '4~5년', '6~10년', '11~15년', '16~20년', '21년 이상'],
+  jobCareer: ['1년 미만', '1~3년', '4~5년', '6~10년', '11~15년', '16년 이상'],
+  teamSize: ['5명 이하', '6~10명', '11~20명', '21~30명', '31명 이상'],
   maxYears: 40,
 } as const;
+export const NON_LEADER = '없음(팀원)';
 
 /** 역할 진단(Q.R) — 5점 척도 */
 export const ROLE_SCALE = ['부족', '다소 부족', '보통', '잘함', '매우 잘함'] as const;

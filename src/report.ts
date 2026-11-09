@@ -13,6 +13,23 @@ import { RESEARCH_NOTICE } from './components/ResearchCard';
 import { savingsSentence } from './components/WorkweekSim';
 import type { AppState } from './state';
 import type { useResults } from './useResults';
+import { ACTIVITY, QUADRANT_INFO as SKILL_QUADRANT, SKILL_LEVELS, buildInsights, computeWorkMap, parseSkillList } from './workmap';
+
+const workMapOf = (s: AppState, firstExp: { name: string; reason: string } | null) => {
+  const m = computeWorkMap(s.profile, typeof window !== 'undefined' && typeof window.SKILL_LIST === 'string' ? parseSkillList(window.SKILL_LIST) : []);
+  return {
+    pattern: m.primary ? ACTIVITY[m.primary].pattern : null,
+    secondPattern: m.secondary ? ACTIVITY[m.secondary].pattern : null,
+    activities: m.activities.map((a) => ({ activity: ACTIVITY[a.key].label, sharePct: r2(a.share * 100) })),
+    skillAvg: m.skillAvg === null ? null : r2(m.skillAvg),
+    skills: m.skills.map((x) => ({ skill: x.def.name, score: x.score, level: x.score ? SKILL_LEVELS[x.score - 1].name : null, tasks: x.linked })),
+    taskMatches: m.tasks.map((t) => ({
+      name: t.name, sharePct: t.share, activity: ACTIVITY[t.activity].label, skills: t.skills.map((x) => x.name),
+      matchScore: t.score === null ? null : r2(t.score), quadrant: t.quadrant ? SKILL_QUADRANT[t.quadrant].title : null,
+    })),
+    insights: buildInsights(m, firstExp).map((x) => `${x.title} — ${x.body}`),
+  };
+};
 
 type Res = ReturnType<typeof useResults>;
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -28,13 +45,18 @@ export function buildReport(s: AppState, res: Res) {
     dataVersion: { taskMaster: taskMasterVersion() || null, research: RESEARCH_DATA_DATE, sources: RESEARCH_SOURCES },
     research: researchBlock(s),
     job: jobLabel(s.profile),
+    dept: s.profile.dept || null,
+    teamSize: s.profile.teamSize || null,
     career: {
       rank: s.profile.career.rank || null,
       position: s.profile.career.position || null,
       payGrade: s.profile.career.payGrade || null,
-      years: s.profile.career.years,
+      tenure: s.profile.career.tenure || null,
+      jobCareer: s.profile.career.jobCareer || null,
       label: careerLabel(s.profile),
     },
+    workMap: workMapOf(s, dx.firstExperiment),
+    reflect: s.profile.reflect,
     weeklyHours: s.profile.weeklyHours,
     savingsSummary: savingsSentence(bands),
     savedHoursByBasis: bands.map((b) => ({ weeklyHours: b.base, aiOnly: r2(b.aiSaved), redesign: r2(b.redesignSaved) })),
@@ -112,7 +134,16 @@ export function toCSV(r: Report): string {
   lines.push(`기본,직급,${esc(r.career.rank ?? '')}`);
   lines.push(`기본,직책,${esc(r.career.position ?? '')}`);
   lines.push(`기본,Pay Grade,${esc(r.career.payGrade ?? '')}`);
-  lines.push(`기본,연차,${r.career.years ?? ''}`);
+  lines.push(`기본,근속기간,${esc(r.career.tenure ?? '')}`);
+  lines.push(`기본,현 직무 경력,${esc(r.career.jobCareer ?? '')}`);
+  lines.push(`기본,소속 부서,${esc(r.dept ?? '')}`);
+  lines.push(`기본,팀 인원,${esc(r.teamSize ?? '')}`);
+  lines.push(`기본,응답 반영도(1~5),${r.reflect ?? ''}`);
+  lines.push(`업무패턴,유형,${esc(r.workMap.pattern ?? '')}`);
+  r.workMap.activities.forEach((a) => lines.push(`업무패턴,${esc(a.activity)}(%),${a.sharePct}`));
+  lines.push(`스킬,스킬 수준 평균,${r.workMap.skillAvg ?? ''}`);
+  r.workMap.skills.forEach((x) => lines.push(`스킬,${esc(x.skill)},${x.score ?? ''}`));
+  r.workMap.taskMatches.forEach((t) => lines.push(`스킬 활용,${esc(t.name)},${esc(`${t.matchScore ?? ''} (${t.quadrant ?? '스킬 미연결'})`)}`));
   lines.push(`요약,AI 업무 유형,${esc(r.archetype)}`);
   r.roles.forEach((x) => lines.push(`역할 진단(${esc(x.group)}),${esc(x.role)},${x.score ?? ''}`));
   const rs = r.research;
@@ -129,8 +160,6 @@ export function toCSV(r: Report): string {
   ];
   tl.forEach(([k, v]) => lines.push(`요약,${esc(k)},${v}`));
   r.savedHoursByBasis.forEach((b) => lines.push(`요약,${esc(`주 ${b.weeklyHours}시간 기준 절감 시간(재설계)`)},${b.redesign}`));
-  lines.push(`환경,승인 방식,${esc(r.workEnv.approval)}`);
-  lines.push(`환경,개인정보 포함,${esc(r.workEnv.personalData)}`);
   lines.push(`환경,사용 가능한 AI 도구,${esc(r.workEnv.aiTools.join(' / '))}`);
   lines.push(`환경,팀의 AI 활용,${esc(r.workEnv.teamCulture)}`);
   lines.push(`환경,주당 AI 학습 시간,${esc(r.workEnv.weeklyLearningTime)}`);
@@ -152,7 +181,11 @@ export function toCSV(r: Report): string {
 export function toText(r: Report): string {
   return [
     `■ 나의 AI 업무혁신 리포트 (${r.job}${r.career.label ? ` · ${r.career.label}` : ''})`,
-    `유형: ${r.archetype}`,
+    ...(r.dept || r.teamSize ? [`소속: ${[r.dept, r.teamSize && `팀 ${r.teamSize}`].filter(Boolean).join(' · ')}`] : []),
+    `업무패턴: ${r.workMap.pattern ?? '—'}${r.workMap.secondPattern ? ` (다음: ${r.workMap.secondPattern})` : ''} · 스킬 수준 평균 ${r.workMap.skillAvg ?? '—'} / 5`,
+    ...r.workMap.taskMatches.filter((t) => t.quadrant).map((t) => `  - ${t.name}: 비중 ${t.sharePct}%, 매치 ${t.matchScore} → ${t.quadrant}`),
+    ...(r.workMap.insights.length ? ['실행 인사이트:', ...r.workMap.insights.map((x, i) => `  ${i + 1}. ${x}`)] : []),
+    `AI 업무 유형: ${r.archetype}`,
     r.summary,
     '',
     `· 연구 기준 진단: ${r.research.sentence} (4분면: ${r.research.quadrant}, 신뢰도 ${r.research.confidence})`,
@@ -170,7 +203,7 @@ export function toText(r: Report): string {
     `· 가장 효과적인 선택: ${r.mostEffective ?? '없음'}`,
     `· 다음 주 실험: ${r.nextExperiment}`,
     `· 주의사항: ${r.cautions.join(' / ')}`,
-    `· 일하는 환경: 승인 ${r.workEnv.approval}, 개인정보 ${r.workEnv.personalData}, 도구 ${r.workEnv.aiTools.join('·') || '미선택'}, 팀 활용 ${r.workEnv.teamCulture}`,
+    `· 일하는 환경: 도구 ${r.workEnv.aiTools.join('·') || '미선택'}, 팀 활용 ${r.workEnv.teamCulture}`,
     ...(r.myStory.aiWish ? [`· AI로 덜고 싶은 고민: ${r.myStory.aiWish}`] : []),
     ...(r.myStory.tips ? [`· 나의 활용 팁: ${r.myStory.tips}`] : []),
     '',

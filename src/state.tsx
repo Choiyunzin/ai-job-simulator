@@ -20,6 +20,7 @@ export interface AppState {
 
 const STORAGE_KEY = 'ai-job-simulator:v2';
 
+
 export const newId = () => Math.random().toString(36).slice(2, 9);
 
 export const blankTask = (): Task => ({
@@ -30,7 +31,9 @@ export const blankTask = (): Task => ({
 export const initialState = (): AppState => ({
   step: 0, sub: 0,
   profile: {
-    job: 'edu', jobOther: '', jobPath: [], career: { rank: '', position: '', payGrade: '', years: null }, roleRatings: {}, customRoles: [], weeklyHours: 40, tasks: [], criteria: [], concerns: [],
+    job: 'edu', jobOther: '', jobPath: [], dept: '', teamSize: '',
+    career: { rank: '', leader: '', position: '', payGrade: '', tenure: '', jobCareer: '' },
+    roleRatings: {}, customRoles: [], skillRatings: {}, reflect: null, weeklyHours: 40, tasks: [], criteria: [], concerns: [],
     env: { approval: 'one', personalData: 'some', culture: 'solo', tools: [], learning: 'mid' },
     notes: { pain: '', tips: '' },
   },
@@ -52,6 +55,7 @@ type Action =
   | { type: 'env'; patch: Partial<WorkEnv> }
   | { type: 'toggleTool'; t: AiTool }
   | { type: 'notes'; patch: Partial<Profile['notes']> }
+  | { type: 'rateSkill'; skill: string; score: number }
   | { type: 'override'; taskId: string; key: ComponentKey; value: number | null }
   | { type: 'resetOverrides'; taskId: string }
   | { type: 'simTask'; id: string }
@@ -127,6 +131,11 @@ function baseReducer(s: AppState, a: Action): AppState {
       else tools = [...cur.filter((x) => !exclusive.includes(x)), a.t];
       return { ...s, profile: { ...s.profile, env: { ...s.profile.env, tools } } };
     }
+    case 'rateSkill': {
+      const skillRatings = { ...s.profile.skillRatings };
+      if (skillRatings[a.skill] === a.score) delete skillRatings[a.skill]; else skillRatings[a.skill] = a.score;
+      return { ...s, profile: { ...s.profile, skillRatings } };
+    }
     case 'notes': return { ...s, profile: { ...s.profile, notes: { ...s.profile.notes, ...a.patch } } };
     case 'override': {
       const cur = { ...(s.overrides[a.taskId] ?? {}) };
@@ -162,6 +171,9 @@ function load(): AppState {
           career: { ...base.profile.career, ...(saved.profile?.career ?? {}) },
         },
       };
+      // 예전 버전에서 직책만 저장된 경우 직책자 여부를 채웁니다.
+      const c = loaded.profile.career;
+      if (!c.leader && c.position) c.leader = c.position.startsWith('없음') ? 'no' : 'yes';
       // 예전 버전(시간 직접 입력)에서 저장된 업무는 비율로 바꿔서 불러옵니다.
       const wh = loaded.profile.weeklyHours || 40;
       loaded.profile = withHours({

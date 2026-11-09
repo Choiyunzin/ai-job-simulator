@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from './state';
 import Intro from './steps/Intro';
 import ProfileStep from './steps/ProfileStep';
-import Diagnosis from './steps/Diagnosis';
+import WorkReport from './steps/WorkReport';
 import Simulation from './steps/Simulation';
 import Events from './steps/Events';
 import Future from './steps/Future';
 
-export const STEPS = ['인트로', '업무 프로파일', '유형 진단', '생산성 시뮬레이션', '상황 대응', '미래의 나'];
+export const STEPS = ['인트로', '업무 프로파일', '진단 리포트', '생산성 시뮬레이션', '상황 대응', '미래의 나'];
 
 export const profileReady = (tasks: { name: string; hours: number }[]) =>
   tasks.some((t) => t.name.trim() && t.hours > 0);
@@ -20,15 +20,14 @@ export default function App() {
 
   useEffect(() => { top.current?.scrollIntoView({ block: 'start' }); }, [s.step, s.sub]);
 
-  const Screen = [Intro, ProfileStep, Diagnosis, Simulation, Events, Future][s.step] ?? Intro;
+  const Screen = [Intro, ProfileStep, WorkReport, Simulation, Events, Future][s.step] ?? Intro;
 
   return (
     <div className="app" ref={top}>
       <header className="topbar">
         <div className="brand" onClick={() => d({ type: 'go', step: 0 })} role="button" tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && d({ type: 'go', step: 0 })}>
-          <span className="brand-mark" aria-hidden="true">◎</span>
-          <span><b>AI와 함께 일하기 시뮬레이터</b><small>AI와 함께라면, 내 일은 어떻게 달라질까?</small></span>
+          <span><b>AI와 함께 일하기 시뮬레이터</b><small>업무 진단 · AI 적용 시뮬레이션</small></span>
         </div>
         <div className="top-actions">
           {confirm ? (
@@ -38,7 +37,7 @@ export default function App() {
               <button className="btn tiny ghost" onClick={() => setConfirm(false)}>취소</button>
             </span>
           ) : (
-            <button className="btn tiny ghost" onClick={() => setConfirm(true)}>↺ 처음부터</button>
+            <button className="btn tiny ghost" onClick={() => setConfirm(true)}>처음부터</button>
           )}
         </div>
         <nav className="progress" aria-label="진행 단계">
@@ -51,7 +50,7 @@ export default function App() {
                 <li key={label} className={state}>
                   <button disabled={!reachable} aria-current={i === s.step ? 'step' : undefined}
                     onClick={() => d({ type: 'go', step: i })}>
-                    <i>{state === 'done' ? '✓' : i + 1}</i><span>{label}</span>
+                    <i className="num">{i + 1}</i><span>{label}</span>
                   </button>
                 </li>
               );
@@ -63,7 +62,7 @@ export default function App() {
         <Screen />
       </main>
       <footer className="foot">
-        모든 수치는 입력값과 가정에 기반한 교육용 추정치이며 실제 성과 예측이 아닙니다. 입력값은 이 브라우저에만 저장됩니다.
+        수치는 입력값과 가정에 따른 교육용 추정치입니다. 입력값은 이 브라우저에만 저장됩니다.
       </footer>
     </div>
   );
@@ -74,10 +73,10 @@ export function StepNav({ onPrev, onNext, nextLabel = '다음', disabled, hint }
 }) {
   return (
     <div className="stepnav">
-      {onPrev ? <button className="btn ghost" onClick={onPrev}>← 이전</button> : <span />}
+      {onPrev ? <button className="btn ghost" onClick={onPrev}>이전</button> : <span />}
       <div className="stepnav-r">
         {hint && <span className="hint">{hint}</span>}
-        {onNext && <button className="btn primary" onClick={onNext} disabled={disabled}>{nextLabel} →</button>}
+        {onNext && <button className="btn primary" onClick={onNext} disabled={disabled}>{nextLabel}</button>}
       </div>
     </div>
   );

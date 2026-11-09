@@ -1,6 +1,6 @@
 // Vite 없이 esbuild만으로 '파일 하나짜리 HTML'을 만드는 스크립트
 // 사용: node scripts/build-single.mjs  → dist/ai-job-simulator.html (직무 목록 칸은 비어 있음)
-//      node scripts/build-single.mjs --list 목록.tsv [--roles 역할.tsv] [--tasks 표준Task.tsv] [--submit-url URL --submit-key 키] --out 사내용.html  → 직무·역할 목록을 넣은 사내 배포용 HTML
+//      node scripts/build-single.mjs --list 목록.tsv [--roles 역할.tsv] [--tasks 표준Task.tsv] [--skills 스킬.tsv] [--submit-url URL --submit-key 키] --out 사내용.html  → 직무·역할 목록을 넣은 사내 배포용 HTML
 //      (사내용 파일은 저장소에 올리지 마세요)
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -9,6 +9,7 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const listFile = arg('--list');
 const rolesFile = arg('--roles');
 const tasksFile = arg('--tasks');
+const skillsFile = arg('--skills');
 const submitUrlArg = arg('--submit-url') ?? '';
 const submitKeyArg = arg('--submit-key') ?? '';
 const outFile = arg('--out') ?? 'dist/ai-job-simulator.html';
@@ -22,10 +23,8 @@ const result = await build({
 const js = result.outputFiles.find((f) => f.path.endsWith('.js')).text;
 const css = result.outputFiles.find((f) => f.path.endsWith('.css')).text;
 
-const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Orbit&display=swap">';
 const safeJs = js.replace(/<\/script/gi, '<\\/script');
 const page = `<title>AI 업무혁신 시뮬레이터</title>
-${fonts}
 <style>${css}</style>
 <div id="root"></div>
 <script>${safeJs}</script>`;
@@ -43,6 +42,10 @@ const roleRows = rolesFile
 const TASK_HEADER = ['직무', 'Task ID', 'Task 문장', '업무 유형', 'McKinsey 활동 유형', 'O*NET 직업 코드', 'O*NET Task/DWA', '대응 수준', '노출 등급', '채점 근거', '채점 방식', 'Anthropic 자동화형 비중', '기준일'].join('\t');
 const taskRows = tasksFile
   ? readFileSync(tasksFile, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l && !/^직무\s+Task/i.test(l))
+  : [];
+const SKILL_HEADER = ['직무', '스킬명', '스킬 정의', '1 개념인지', '2 가이드수행', '3 독립수행', '4 복잡대응', '5 전문가'].join('\t');
+const skillRows = skillsFile
+  ? readFileSync(skillsFile, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l && !/^직무\s+스킬/.test(l))
   : [];
 // 템플릿 문자열 안에서 깨지지 않도록 역슬래시·백틱·${ 를 무력화
 const esc = (t) => t.replace(/\\/g, '\\\\').replace(/`/g, "'").replace(/\$\{/g, '$ {');
@@ -72,6 +75,15 @@ ${['직무\t역할', ...roleRows.map(esc)].join('\n')}
 ${[TASK_HEADER, ...taskRows.map(esc)].join('\n')}
 \`;</script>
 <!-- ▲▲▲ 표준 Task 목록 끝 ▲▲▲ -->
+<!-- ▼▼▼ 스킬 목록: 이 사이만 고치면 됩니다 ▼▼▼
+  · 한 줄에 스킬 하나, 탭으로 구분한 8칸: 직무 / 스킬명 / 스킬 정의 / 1 개념인지 / 2 가이드수행 / 3 독립수행 / 4 복잡대응 / 5 전문가
+  · 직무 칸은 위 직무 목록의 '직무' 이름(또는 '직렬' 이름)과 같아야 합니다. '공통'으로 적으면 모든 직무에 나옵니다.
+  · 1~5단계 칸에는 그 스킬의 단계별 수준 정의를 적습니다. 비워 두면 공통 단계 설명이 나옵니다.
+  · 비어 있으면 기본 예시 스킬(AI 도구 활용·데이터 분석 등)로 동작합니다. -->
+<script>window.SKILL_LIST = \`
+${[SKILL_HEADER, ...skillRows.map(esc)].join('\n')}
+\`;</script>
+<!-- ▲▲▲ 스킬 목록 끝 ▲▲▲ -->
 <!-- ▼▼▼ 결과 제출 설정: 이 두 줄만 고치면 됩니다 ▼▼▼
   · SUBMIT_URL: Power Automate 'HTTP 요청을 받았을 때' 흐름의 주소(https://…)를 따옴표 안에 붙여넣으세요.
   · SUBMIT_KEY: 흐름의 '키 확인' 조건과 같은 값을 적으세요(형식이 다른 데이터를 걸러내는 용도).
@@ -86,4 +98,4 @@ ${page.replace('<div id="root"></div>', '</head><body><div id="root"></div>')}
 </body></html>`);
 // 2) 페이지 본문만 있는 버전 (아티팩트 게시용)
 writeFileSync('dist/artifact.html', page);
-console.log('built', outFile, (readFileSync(outFile).length / 1024).toFixed(0) + 'KB', `직무 ${rows.length}줄 · 역할 ${roleRows.length}줄 · 표준 Task ${taskRows.length}줄`);
+console.log('built', outFile, (readFileSync(outFile).length / 1024).toFixed(0) + 'KB', `직무 ${rows.length}줄 · 역할 ${roleRows.length}줄 · 표준 Task ${taskRows.length}줄 · 스킬 ${skillRows.length}줄`);

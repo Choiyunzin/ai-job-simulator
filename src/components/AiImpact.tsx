@@ -1,4 +1,3 @@
-import { StepNav } from '../App';
 import { ARCHETYPES } from '../engine/config';
 import { jobLabel } from '../jobCatalog';
 import { fmtH } from '../engine/simulate';
@@ -9,7 +8,8 @@ import { useResults } from '../useResults';
 import { ResearchCard } from '../components/ResearchCard';
 import { researchDiagnosis } from '../engine/research';
 
-export default function Diagnosis() {
+/** AI 영향분석 모듈 (진단 리포트 3번): AI 업무 유형 · 연구 기준 진단 · 잠재력 TOP · 병목 */
+export function AiImpact() {
   const { s, d } = useApp();
   const { dx, after } = useResults();
   const shareTotal = s.profile.tasks.reduce((x, t) => x + (t.share || 0), 0);
@@ -24,10 +24,8 @@ export default function Diagnosis() {
   };
 
   return (
-    <section className="dx">
-      <p className="eyebrow">STEP 3 · 나의 AI 업무 유형 진단</p>
+    <div className="dx">
       <div className={`dx-hero t-${dx.archetype}`}>
-        <div className="dx-icon" aria-hidden="true">{A.icon}</div>
         <div className="dx-main">
           <small>{job} · 나의 AI 업무 유형은</small>
           <h1>{A.name}</h1>
@@ -87,7 +85,7 @@ export default function Diagnosis() {
             <h3>{dx.firstExperiment.name}</h3>
             <p>{dx.firstExperiment.reason}</p>
           </div>
-          <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션 →</button>
+          <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션</button>
         </div>
       )}
 
@@ -96,7 +94,7 @@ export default function Diagnosis() {
         <p className="fine">아래 네 점수 중 가장 높은 유형이 선택됩니다. 이 분류는 실제 심리검사가 아니라 교육용 게임을 위한 가상 분류이며, 어느 유형이 더 우수하다는 뜻이 아닙니다.</p>
         <div className="meters">
           {(Object.keys(ARCHETYPES) as ArchetypeId[]).map((k) => (
-            <Meter key={k} label={`${ARCHETYPES[k].icon} ${ARCHETYPES[k].name}`} value={dx.scores[k]} tone={k === dx.archetype ? 'accent' : 'good'} />
+            <Meter key={k} label={ARCHETYPES[k].name} value={dx.scores[k]} tone={k === dx.archetype ? 'accent' : 'good'} />
           ))}
         </div>
         <ul className="factors">
@@ -110,8 +108,6 @@ export default function Diagnosis() {
           <li>잠재력: 표준 업무는 유형 상한 × 연구 등급 계수, 직접 입력 업무는 유형 상한 × 적용 가능성 배수</li>
         </ul>
       </details>
-
-      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: 5 })} onNext={() => startSim()} nextLabel="AI 도입 시뮬레이션 시작" />
-    </section>
+    </div>
   );
 }

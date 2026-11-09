@@ -14,28 +14,11 @@ export function useReducedMotion() {
   return r;
 }
 
-/** 숫자 카운트업: 값이 바뀌면 이전 값에서 새 값으로 이동 */
-export function CountUp({ value, decimals = 1, suffix = '', duration = 700 }: {
+/** 숫자 표시 (애니메이션 없음) */
+export function CountUp({ value, decimals = 1, suffix = '' }: {
   value: number; decimals?: number; suffix?: string; duration?: number;
 }) {
-  const reduced = useReducedMotion();
-  const [shown, setShown] = useState(value);
-  const from = useRef(value);
-  useEffect(() => {
-    if (reduced) { setShown(value); from.current = value; return; }
-    const start = performance.now();
-    const a = from.current;
-    let raf = 0;
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      const e = 1 - Math.pow(1 - p, 3);
-      setShown(a + (value - a) * e);
-      if (p < 1) raf = requestAnimationFrame(tick); else from.current = value;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(raf); from.current = value; };
-  }, [value, reduced, duration]);
-  const f = Number.isFinite(shown) ? shown : 0;
+  const f = Number.isFinite(value) ? value : 0;
   return <span className="num">{f.toFixed(decimals)}{suffix}</span>;
 }
 
@@ -149,7 +132,7 @@ export function Delta({ value, unit = '', goodWhen = 'down', decimals = 1 }: {
   const good = z ? null : goodWhen === 'down' ? value < 0 : value > 0;
   return (
     <span className={`delta ${z ? 'flat' : good ? 'good' : 'bad'}`}>
-      {z ? '변화 없음' : `${value > 0 ? '▲ +' : '▼ −'}${Math.abs(value).toFixed(decimals)}${unit}`}
+      {z ? '변화 없음' : `${value > 0 ? '+' : '−'}${Math.abs(value).toFixed(decimals)}${unit}`}
     </span>
   );
 }

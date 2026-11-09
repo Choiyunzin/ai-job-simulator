@@ -69,20 +69,35 @@ export interface Task {
   matchLevel?: string;      // O*NET 대응 수준 (일치/유사/없음)
   aeiAutoShare?: number | null; // Anthropic 자동화형 비중 (0~1, 대응된 경우만)
   aiMode?: AiMode | null;   // v2: AI 활용 방식 (활용 1단계 이상일 때만 질문, null = 미응답)
+  // ── Work Mapping: 업무별 주요 활동과 연결 스킬 ──
+  activity?: Activity;      // 이 업무의 주요 활동 (없으면 업무 유형에서 추정)
+  skills?: string[];        // 이 업무에 쓰는 스킬 이름 (최대 3개)
 }
+
+/** Work Mapping 8가지 활동(= 업무 패턴 8유형) */
+export type Activity =
+  | 'research' | 'learning' | 'execution' | 'coordination'
+  | 'communication' | 'relationship' | 'planning' | 'analysis';
 
 export interface Career {
   rank: string;             // 직급 ('' = 미선택)
-  position: string;         // 직책
+  leader: '' | 'yes' | 'no'; // 직책자 여부
+  position: string;         // 직책 (직책자면 팀장·실장, 아니면 '없음(팀원)')
   payGrade: string;         // Pay Grade
-  years: number | null;     // 연차 0~40 (null = 미선택)
+  tenure: string;           // 근속기간 구간 ('' = 미선택)
+  jobCareer: string;        // 현 직무 경력 구간 ('' = 미선택)
+  years?: number | null;    // (예전 버전 연차 — 더 이상 묻지 않음)
 }
 
 export interface Profile {
   job: JobId;
   jobOther: string;
   jobPath: string[];        // 사내 직무 목록에서 고른 경로 [직군, 직종, 직렬, 직무] (목록을 쓰지 않으면 빈 배열)
-  career: Career;           // 직급·직책·Pay Grade·연차 (선택 입력, 리포트 표시용)
+  dept: string;             // 소속 부서명 (선택)
+  teamSize: string;         // 팀 인원 구간 (선택)
+  career: Career;           // 직급·직책·Pay Grade·근속기간·직무경력 (리포트 표시용)
+  skillRatings: Record<string, number>; // 스킬 이름 → 1~5 수준 (개념인지~전문가)
+  reflect: number | null;   // 진단 응답이 내 업무를 얼마나 잘 반영하는지 1~5
   roleRatings: Record<string, number>; // 역할 진단: 역할 이름 → 1~5점
   customRoles: string[];    // 목록에 없어서 직접 추가한 역할
   weeklyHours: number;      // 시간 환산 기준 근무시간 (40 또는 52, 상세 그래프 기준)

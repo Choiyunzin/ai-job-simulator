@@ -1,13 +1,13 @@
 // 결과 제출: Power Automate 'HTTP 요청을 받았을 때' 흐름으로 익명 결과를 보내 SharePoint 엑셀에 쌓습니다.
 // 제출 주소·키는 HTML 맨 위 '결과 제출 설정' 칸(window.SUBMIT_URL, window.SUBMIT_KEY)에서 읽습니다.
-// 이름·사번은 보내지 않습니다. 연차는 구간으로만 보냅니다.
+// 이름·사번은 보내지 않습니다. 근속기간·직무경력은 구간으로만 보냅니다.
 import type { AppState } from './state';
 import type { buildReport } from './report';
 
 declare global { interface Window { SUBMIT_URL?: string; SUBMIT_KEY?: string } }
 
 type Report = ReturnType<typeof buildReport>;
-export const SUBMIT_SCHEMA_VERSION = '1';
+export const SUBMIT_SCHEMA_VERSION = '2';
 
 export const submitUrl = () => {
   const u = typeof window.SUBMIT_URL === 'string' ? window.SUBMIT_URL.trim() : '';
@@ -48,6 +48,7 @@ export function buildSubmission(s: AppState, r: Report) {
   const path = p.jobPath.length === 4 ? p.jobPath : ['', '', '', r.job];
   const by = (h: number) => r.savedHoursByBasis.find((b) => b.weeklyHours === h);
   const submissionId = rid();
+  const tm = (name: string) => r.workMap.taskMatches.find((m) => m.name === name);
   return {
     schemaVersion: SUBMIT_SCHEMA_VERSION,
     key: typeof window.SUBMIT_KEY === 'string' ? window.SUBMIT_KEY : '',
@@ -57,7 +58,15 @@ export function buildSubmission(s: AppState, r: Report) {
     dataVersion: r.dataVersion.taskMaster ?? '',
     // 직무·경력 (이름·사번 없음)
     jobGroup: path[0], jobType: path[1], jobSeries: path[2], job: path[3],
-    rank: p.career.rank, position: p.career.position, payGrade: p.career.payGrade, yearsBand: yearsBand(p.career.years),
+    dept: p.dept, teamSize: p.teamSize,
+    rank: p.career.rank, position: p.career.position, payGrade: p.career.payGrade,
+    tenure: p.career.tenure, jobCareer: p.career.jobCareer,
+    // Work Mapping 진단
+    workPattern: r.workMap.pattern ?? '',
+    activityShares: r.workMap.activities.map((a) => `${a.activity}:${a.sharePct}`).join(' | '),
+    skillAvg: r.workMap.skillAvg,
+    skillScores: r.workMap.skills.filter((x) => x.score !== null).map((x) => `${x.skill}:${x.score}`).join(' | '),
+    reflect: p.reflect,
     // 진단·시뮬레이션 결과
     archetype: r.archetype,
     weeklyHours: p.weeklyHours,
@@ -80,8 +89,6 @@ export function buildSubmission(s: AppState, r: Report) {
     roleStrengths: r.roleStrengths.join(' | '),
     roleGaps: r.roleGaps.join(' | '),
     roleScores: r.roles.filter((x) => x.score !== null).map((x) => `${x.role}:${x.score}`).join(' | '),
-    approval: r.workEnv.approval,
-    personalData: r.workEnv.personalData,
     aiTools: r.workEnv.aiTools.join(' | '),
     teamCulture: r.workEnv.teamCulture,
     learningTime: r.workEnv.weeklyLearningTime,
@@ -106,6 +113,9 @@ export function buildSubmission(s: AppState, r: Report) {
       aiMode: t.aiMode,
       applicability: t.applicability,
       perception: t.perception ?? '',
+      activity: tm(t.name)?.activity ?? '',
+      skills: (tm(t.name)?.skills ?? []).join(' | '),
+      matchScore: tm(t.name)?.matchScore ?? null,
       beforeHours: t.beforeHours,
       redesignHours: t.redesignHours,
       reductionPct: t.reductionPct,

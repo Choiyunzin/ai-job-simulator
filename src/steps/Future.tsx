@@ -16,8 +16,8 @@ import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
-const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
-const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#A98BF0'];
+const TASK_COLORS = ['#9a9a9a', '#b2b2b2', '#c6c6c6', '#d8d8d8', '#e8e8e8'];
+const INVEST_COLORS = ['#1f4fd1', '#2b2b2b', '#5c5c5c', '#8a8a8a', '#b4b4b4', '#d6d6d6'];
 
 export default function Future() {
   const { s, d } = useApp();
@@ -55,8 +55,7 @@ export default function Future() {
 
   return (
     <section className="future">
-      <p className="eyebrow">STEP 6 · AI와 함께 일하는 미래의 나</p>
-      <h1 className="h-screen">AI와 함께 일하는 미래의 나</h1>
+      <h1 className="h-screen">근무시간 기준 결과와 재투자 계획</h1>
 
       <WorkweekSim hours={s.profile.weeklyHours} onChange={(h) => d({ type: 'profile', patch: { weeklyHours: h } })}
         redesign={redesign} after={after} bands={bands} />
@@ -104,7 +103,7 @@ export default function Future() {
           <h3>확보한 시간 재투자하기</h3>
           <span className={`pill ${overAlloc ? 'bad' : 'good'}`}><span className="num">{allocated.toFixed(1)} / {free.toFixed(1)}</span>시간</span>
         </div>
-        {overAlloc && <p className="warn">⚠ 확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더를 줄여 주세요.</p>}
+        {overAlloc && <p className="warn">확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더를 줄여 주세요.</p>}
         <div className="invest">
           {items.map((it, i) => {
             const v = s.reinvest[it.key] ?? 0;
@@ -127,7 +126,6 @@ export default function Future() {
 
       <div className="report-card" id="report">
         <div className="rc-head">
-          <span className="rc-icon" aria-hidden="true">{A.icon}</span>
           <div>
             <small>나의 AI 업무혁신 리포트 · {jobLabel(s.profile)}{careerLabel(s.profile) && ` · ${careerLabel(s.profile)}`}</small>
             <h2>{A.name}</h2>
@@ -172,7 +170,7 @@ export default function Future() {
             </div>
           )}
           <div>
-            <h4>가장 효과적이었던 재설계 선택 <small>(성공 기준 가중)</small></h4>
+            <h4>가장 효과적이었던 재설계 선택</h4>
             <p>{best && best.score > 0.01 ? <>{best.label}<small className="num"> · 노동 {sgn(-best.hours)}{fmtH(Math.abs(best.hours))} · 대기 {sgn(-best.wait)}{fmtH(Math.abs(best.wait))} · 품질 {sgn(best.quality)}{Math.abs(best.quality).toFixed(1)}점 · 위험 {sgn(-best.risk)}{Math.abs(best.risk).toFixed(1)}점</small></> : '아직 효과를 낸 재설계 선택이 없습니다.'}</p>
           </div>
           <div className="wide">
@@ -216,9 +214,9 @@ export default function Future() {
       </details>
 
       <div className="endbar">
-        <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>🎲 다른 상황으로 다시 해보기</button>
-        <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>↻ 시뮬레이션 다시 보기</button>
-        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>✎ 업무 수정하기</button>
+        <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>다른 상황으로 다시 해보기</button>
+        <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 다시 보기</button>
+        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>업무 수정하기</button>
       </div>
       <StepNav onPrev={() => d({ type: 'go', step: 4 })} />
     </section>
@@ -258,7 +256,7 @@ function Exports({ json, csv, text }: { json: string; csv: string; text: string 
       <h3>결과 저장하기</h3>
       <div className="ex-btns">
         {!framed && <>
-          <button className="btn" onClick={() => window.print()}>🖨 인쇄 / PDF 저장</button>
+          <button className="btn" onClick={() => window.print()}>인쇄 / PDF 저장</button>
           <button className="btn" onClick={() => download(`ai-simulator-${stamp}.json`, json, 'application/json')}>JSON 내려받기</button>
           <button className="btn" onClick={() => download(`ai-simulator-${stamp}.csv`, csv, 'text/csv')}>CSV 내려받기</button>
         </>}
