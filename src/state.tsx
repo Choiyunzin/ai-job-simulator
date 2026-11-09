@@ -169,8 +169,6 @@ function load(): AppState {
           career: { ...base.profile.career, ...(saved.profile?.career ?? {}) },
         },
       };
-      // 상황 대응 단계를 없앴으므로, 예전에 고른 상황 선택이 결과에 섞이지 않게 비웁니다.
-      loaded.choices = {};
       if (loaded.step > 4) loaded.step = 4;
       // 예전 버전에서 직책만 저장된 경우 직책자 여부를 채웁니다.
       const c = loaded.profile.career;

@@ -884,3 +884,47 @@ ul.dots { margin: 0; padding-left: 18px; display: flex; flex-direction: column; 
 .reinvest-hint b { color: var(--fg); margin-right: 6px; }
 .reinvest-hint small { color: var(--fg-faint); }
 .chart-wrap .qbg.ai { fill: rgba(47, 107, 255, 0.05); }
+
+/* 진단 영역 구분 */
+.area-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px; margin-bottom: 4px; border-radius: 12px; background: linear-gradient(90deg, rgba(91, 140, 255, 0.14), rgba(157, 123, 255, 0.06)); }
+.area-head > span { font-size: 26px; font-weight: 700; color: var(--violet); line-height: 1; }
+.area-head b { display: block; font-size: 18px; font-family: var(--font-display); }
+.area-head small { font-size: 12.5px; color: var(--fg-dim); }
+.bm.gap { margin-left: 10px; }
+.bm-area { font-style: normal; font-size: 11px; font-weight: 700; color: var(--violet); margin-right: 4px; padding-right: 6px; border-right: 1px solid var(--line); }
+/* AI 영향도 세 가지 근거 */
+.lenses3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .lenses3 { grid-template-columns: 1fr; } }
+.lens { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.lens-q { font-size: 13px; font-weight: 700; color: var(--violet); }
+.lens > b { font-size: 28px; font-family: var(--font-num); font-weight: 600; line-height: 1.2; }
+.lens p { font-size: 13.5px; color: var(--fg-dim); }
+.lens small { font-size: 12px; color: var(--fg-faint); }
+.lens-src { font-style: normal; font-size: 11.5px; color: var(--cyan); margin-top: auto; padding-top: 6px; border-top: 1px dashed var(--line); }
+/* AI 활용 가이드 */
+.guide-tbl { min-width: 760px; }
+.guide-tbl td { vertical-align: top; }
+.mode-tag { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--bg-2); }
+.mode-tag.delegate { background: rgba(47, 107, 255, 0.12); color: var(--blue); }
+.mode-tag.with { background: rgba(157, 123, 255, 0.14); color: var(--violet); }
+.mode-tag.assist { background: rgba(79, 209, 165, 0.14); color: var(--good); }
+.mode-tag.blocked { background: rgba(242, 182, 90, 0.18); color: var(--warn); }
+/* 생산성 시뮬레이터: 전체 업무 기준 범위 */
+.scope { gap: 14px; }
+.scope-bars { display: flex; flex-direction: column; gap: 10px; }
+.scope-row { display: grid; grid-template-columns: minmax(180px, 34%) 1fr 56px; gap: 12px; align-items: center; }
+.sc-label { display: flex; flex-direction: column; font-size: 14px; font-weight: 600; }
+.sc-label small { font-weight: 400; font-size: 12px; color: var(--fg-faint); }
+.sc-track { height: 14px; border-radius: 7px; background: var(--bg-2); overflow: hidden; }
+.sc-track i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg, var(--blue), var(--violet)); }
+.scope-row b { text-align: right; font-size: 15px; }
+.scope-out { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scope-out > div { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 11px; background: rgba(157, 123, 255, 0.1); }
+.scope-out span { font-size: 12.5px; color: var(--fg-dim); }
+.scope-out b { font-size: 20px; }
+.scope-out small { font-size: 12px; color: var(--fg-faint); }
+@media (max-width: 640px) { .scope-row { grid-template-columns: 1fr 52px; } .sc-track { grid-column: 1 / -1; grid-row: 2; } .scope-out { grid-template-columns: 1fr; } }
+.scope-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--fg-dim); }
+.scope-tips li.warn { font-size: 14px; }
+.future .area-head { margin-top: 8px; }
+.events { display: flex; flex-direction: column; gap: 14px; }

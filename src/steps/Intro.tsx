@@ -11,8 +11,8 @@ export default function Intro() {
         <h1>AI와 함께라면,<br />내 일은 어떻게<br />달라질까?</h1>
         <p className="lead">AI가 덜어줄 일과 새로 생길 일,<br />내 업무로 직접 확인해 봐요.</p>
         <p className="body">
-          평소 하는 업무를 바탕으로 AI와 함께 일하는 모습을 미리 그려봅니다. 몇 가지 질문에 답하면
-          나의 AI 업무 유형, 달라지는 업무 시간, 미리 챙겨야 할 부분, 앞으로의 업무 모습을 확인할 수 있습니다.
+          AX 업무 방식 전환을 위해, 지금 하는 일을 기준으로 <b>AI 영향도</b>, <b>AI 활용 가능성</b>, <b>AI 위임 가능 업무</b>를 진단합니다.
+          ① 업무현황 → ② AI 영향진단 → ③ 생산성 시뮬레이터 → ④ 실행 인사이트 순서로 진행돼요.
         </p>
         <div className="intro-cta">
           <button className="btn primary big" onClick={() => d({ type: 'go', step: 1, sub: resumed ? s.sub : 0 })}>

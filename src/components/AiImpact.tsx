@@ -5,12 +5,11 @@ import type { ArchetypeId } from '../engine/types';
 import { CountUp, Meter } from '../components/viz';
 import { useApp } from '../state';
 import { useResults } from '../useResults';
-import { ResearchCard } from '../components/ResearchCard';
-import { researchDiagnosis } from '../engine/research';
+import { pct, researchDiagnosis } from '../engine/research';
 
 /** AI 영향분석 모듈 (진단 리포트 3번): AI 업무 유형 · 연구 기준 진단 · 잠재력 TOP · 병목 */
 export function AiImpact() {
-  const { s, d } = useApp();
+  const { s } = useApp();
   const { dx, after } = useResults();
   const shareTotal = s.profile.tasks.reduce((x, t) => x + (t.share || 0), 0);
   const A = ARCHETYPES[dx.archetype];
@@ -18,10 +17,6 @@ export function AiImpact() {
   const potBadge = rs.stdShare >= 0.5 ? '연구 기준' : '유형 추정';
   const job = jobLabel(s.profile);
   const currentAi = after.tasks.reduce((x, r) => x + r.before.currentAiHours, 0);
-  const startSim = (id?: string) => {
-    if (id) d({ type: 'simTask', id });
-    d({ type: 'go', step: 3 });
-  };
 
   return (
     <div className="dx">
@@ -51,44 +46,20 @@ export function AiImpact() {
           <small>{potBadge === '연구 기준' ? '유형 상한 × 연구 등급 계수' : '업무 유형 × 적용 가능성'}</small></div>
       </div>
 
-      <ResearchCard profile={s.profile} />
+      <AiLenses />
 
-      <div className="grid2 gap">
-        <div className="card">
-          <h3>AI 적용 잠재력이 높은 업무 TOP {dx.topTasks.length}</h3>
-          <ol className="rank">
-            {dx.topTasks.map((t, i) => (
-              <li key={t.id}>
-                <span className="rk num">{i + 1}</span>
-                <span className="rn">{t.name}<small>직접작업의 {Math.round(t.reduction * 100)}%를 AI가 맡을 수 있다고 가정</small></span>
-                <b className={`num ${t.savedHours >= 0 ? 'pos' : 'neg'}`}>{t.savedHours >= 0 ? '−' : '+'}{fmtH(Math.abs(t.savedHours))}/주</b>
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="card">
-          <h3>AI 도입 시 주의해야 할 병목 TOP 2</h3>
-          <ul className="bottleneck">
-            {dx.bottlenecks.map((b) => (
-              <li key={b.key}>
-                <b>{b.label}</b><span className="num">주 {fmtH(b.hours)}</span>
-                <small>{b.desc}</small>
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="card">
+        <h3>AI 적용 잠재력이 높은 업무 TOP {dx.topTasks.length}</h3>
+        <ol className="rank">
+          {dx.topTasks.map((t, i) => (
+            <li key={t.id}>
+              <span className="rk num">{i + 1}</span>
+              <span className="rn">{t.name}<small>직접작업의 {Math.round(t.reduction * 100)}%를 AI가 맡을 수 있다고 가정</small></span>
+              <b className={`num ${t.savedHours >= 0 ? 'pos' : 'neg'}`}>{t.savedHours >= 0 ? '−' : '+'}{fmtH(Math.abs(t.savedHours))}/주</b>
+            </li>
+          ))}
+        </ol>
       </div>
-
-      {dx.firstExperiment && (
-        <div className="card exp">
-          <div>
-            <span className="eyebrow">가장 먼저 실험해볼 업무</span>
-            <h3>{dx.firstExperiment.name}</h3>
-            <p>{dx.firstExperiment.reason}</p>
-          </div>
-          <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션 →</button>
-        </div>
-      )}
 
       <details className="basis">
         <summary>유형 판정 근거 보기</summary>
@@ -109,6 +80,42 @@ export function AiImpact() {
           <li>잠재력: 표준 업무는 유형 상한 × 연구 등급 계수, 직접 입력 업무는 유형 상한 × 적용 가능성 배수</li>
         </ul>
       </details>
+    </div>
+  );
+}
+
+/** AI 영향도를 세 가지 근거로 읽기: 할 수 있는가(GPTs are GPTs) · 얼마의 가치(McKinsey) · 실제로 하고 있는가(Anthropic Economic Index) */
+export function AiLenses() {
+  const { s } = useApp();
+  const { dx, redesign } = useResults();
+  const r = researchDiagnosis(s.profile, 'beta');
+  const T = redesign.totals;
+  const eCount = (e: string) => r.rows.filter((x) => x.e === e).length;
+  return (
+    <div className="lenses3">
+      <div className="lens">
+        <span className="lens-q">① 할 수 있는가?</span>
+        <b className="num">{pct(r.exposure)}</b>
+        <p>AI로 시간을 크게 줄일 수 있는 업무 비중 <small>(연구 기준 노출도 β)</small></p>
+        <small>바로 가능(E1) {eCount('E1')}개 · 도구가 있으면 가능(E2) {eCount('E2')}개 · 어려움(E0) {eCount('E0')}개</small>
+        <em className="lens-src">근거: Eloundou et al., "GPTs are GPTs"</em>
+      </div>
+      <div className="lens">
+        <span className="lens-q">② 얼마의 가치·변화가 예상되는가?</span>
+        <b className="num">{Math.round(dx.avgPotential * 100)}%</b>
+        <p>업무별 AI 적용 잠재력 평균 · 재설계 시 주 <b className="num">{fmtH(Math.max(0, T.savedSameVolume))}</b> 절감({T.savingRate.toFixed(1)}%) 예상</p>
+        <small>업무 유형별 자동화 잠재력 × 적용 가능성으로 추정</small>
+        <em className="lens-src">근거: McKinsey, "The economic potential of generative AI"</em>
+      </div>
+      <div className="lens">
+        <span className="lens-q">③ 실제로 하고 있는가?</span>
+        <b className="num">{pct(r.usage)}</b>
+        <p>지금 실제로 AI를 쓰는 업무 비중 <small>(현재 활용도)</small></p>
+        <small>{r.autoShare !== null
+          ? `AI에 맡기는 자동화형 ${pct(r.autoShare)} · 함께 일하는 증강형 ${pct(1 - r.autoShare)}`
+          : '활용 방식을 고른 업무가 없어요'}</small>
+        <em className="lens-src">근거: Anthropic Economic Index</em>
+      </div>
     </div>
   );
 }

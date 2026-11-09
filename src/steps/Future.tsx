@@ -14,6 +14,8 @@ import { buildReport, toCSV, toText } from '../report';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
+import { InsightList } from './WorkReport';
+import { SituationSim } from './Events';
 import { QUADRANT_INFO as SKILL_Q, computeWorkMap, useSkillCatalog } from '../workmap';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
@@ -59,8 +61,51 @@ export default function Future() {
 
   return (
     <section className="future">
-      <p className="eyebrow">STEP 6 · AI와 함께 일하는 미래의 나</p>
-      <h1 className="h-screen">AI와 함께 일하는 미래의 나</h1>
+      <p className="eyebrow">STEP 5 · ④ 실행 인사이트</p>
+      <h1 className="h-screen">무엇부터, 어떻게 바꿔 볼까요?</h1>
+      <p className="lead-s">진단 결과를 바탕으로 AI 활용 가능 영역과 업무 혁신 방향, AI를 쓸 때 주의할 점을 정리했어요. 실제로 생길 수 있는 상황도 미리 겪어 보고, 아낀 시간을 어디에 쓸지 정해 보세요.</p>
+
+      <div className="area-head"><span>④-1</span><div><b>AI 활용 가능 영역과 업무 혁신 방향</b><small>진단 결과로 바로 시작해 볼 다음 행동</small></div></div>
+      <InsightList />
+      {dx.firstExperiment && (
+        <div className="card exp">
+          <div>
+            <span className="eyebrow">가장 먼저 실험해 볼 업무</span>
+            <h3>{dx.firstExperiment.name}</h3>
+            <p>{dx.firstExperiment.reason}</p>
+          </div>
+          <button className="btn primary" onClick={() => { d({ type: 'simTask', id: dx.firstExperiment!.id }); d({ type: 'go', step: 3 }); }}>이 업무로 시뮬레이션 →</button>
+        </div>
+      )}
+
+      <div className="area-head"><span>④-2</span><div><b>AI 활용 시 주의할 점</b><small>병목이 생기는 업무와 AI 활용 범위 설정</small></div></div>
+      <div className="grid2 gap">
+        <div className="card">
+          <h3>병목이 생기는 업무·시간 TOP {dx.bottlenecks.length}</h3>
+          <ul className="bottleneck">
+            {dx.bottlenecks.map((b) => (
+              <li key={b.key}><b>{b.label}</b><span className="num">주 {fmtH(b.hours)}</span><small>{b.desc}</small></li>
+            ))}
+          </ul>
+        </div>
+        <div className="card">
+          <h3>AI 활용 범위 정하기</h3>
+          <ul className="scope-tips">
+            {rs.rows.filter((x) => x.frontier).map((x) => (
+              <li key={x.id} className="warn">'{x.name}'은 AI가 잘 못하는 업무인데 {x.level}단계로 많이 쓰고 있어요. 활용 범위를 자료 조사·초안 보조로 좁히고 결과를 꼭 확인하세요.</li>
+            ))}
+            {rs.rows.filter((x) => x.feasible === 0 && x.e !== 'E0').slice(0, 2).map((x) => (
+              <li key={x.id + 'f'}>'{x.name}'은 지금 회사 도구로는 AI 활용이 어려워요. 쓸 수 있는 도구·권한부터 확인하세요.</li>
+            ))}
+            {tips.map((t) => <li key={t}>{t}</li>)}
+          </ul>
+        </div>
+      </div>
+
+      <div className="area-head"><span>④-3</span><div><b>활용 상황 미리 겪어 보기</b><small>AI를 쓸 때 생기는 상황을 시뮬레이션으로 미리 인지하고 대응을 연습해요</small></div></div>
+      <SituationSim />
+
+      <div className="area-head"><span>④-4</span><div><b>아낀 시간, 어디에 쓸까?</b><small>근무시간 기준 절감 시간, 재투자 계획, 리포트 저장</small></div></div>
 
       <WorkweekSim hours={s.profile.weeklyHours} onChange={(h) => d({ type: 'profile', patch: { weeklyHours: h } })}
         redesign={redesign} after={after} bands={bands} />

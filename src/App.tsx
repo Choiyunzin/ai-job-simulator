@@ -6,7 +6,7 @@ import WorkReport from './steps/WorkReport';
 import Simulation from './steps/Simulation';
 import Future from './steps/Future';
 
-export const STEPS = ['인트로', '업무 프로파일', '진단 리포트', '생산성 시뮬레이션', '미래의 나'];
+export const STEPS = ['인트로', '업무현황 서베이', '업무현황·AI 영향진단', '생산성 시뮬레이터', '실행 인사이트'];
 
 export const profileReady = (tasks: { name: string; hours: number }[]) =>
   tasks.some((t) => t.name.trim() && t.hours > 0);

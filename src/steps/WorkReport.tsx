@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StepNav } from '../App';
 import { AiImpact } from '../components/AiImpact';
+import { ResearchCard } from '../components/ResearchCard';
+import { researchDiagnosis } from '../engine/research';
 import { ReadingGuide } from '../components/ReadingGuide';
 import { careerLabel, jobLabel } from '../jobCatalog';
 import { useApp } from '../state';
@@ -13,13 +15,19 @@ import {
 } from '../workmap';
 import { LAST_SUB } from './ProfileStep';
 
+/** 진단 영역 ① 업무현황 · ② AI 영향진단 (③ 생산성 시뮬레이터, ④ 실행 인사이트는 다음 단계) */
+export const AREAS = [
+  { key: 'work', no: '①', title: '업무현황', sub: '직무 기준으로 정리한 개인별 업무 수행 특성 (기준정보·직무·업무·비중·활동)' },
+  { key: 'ai', no: '②', title: 'AI 영향진단', sub: '지금 하는 일 기준의 AI 영향도, 업무별 AI 도구 가용성, AI 위임 가능 업무, AI 활용 가이드' },
+] as const;
 export const MODULES = [
-  { key: 'status', no: '01', title: '직무현황', sub: '직무가 어떻게 이루어져 있나' },
-  { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크와 스킬로 일하고 있나' },
-  { key: 'ai', no: '03', title: 'AI 영향분석', sub: '지금 하는 일이 AI의 영향을 어떻게 받을까' },
-  { key: 'use', no: '04', title: '스킬 활용분석', sub: 'AI 적용 가능성 × 스킬 수준으로 보는 스킬 방향' },
-  { key: 'pattern', no: '05', title: '업무패턴', sub: '8가지 업무 유형으로 보는 일하는 방식' },
-  { key: 'next', no: '06', title: '실행 인사이트', sub: '진단 결과로 시작해 볼 다음 행동' },
+  { key: 'status', area: 'work', no: '01', title: '직무현황', sub: '직무가 어떻게 이루어져 있나' },
+  { key: 'skill', area: 'work', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크와 스킬로 일하고 있나' },
+  { key: 'pattern', area: 'work', no: '03', title: '업무패턴', sub: '8가지 업무 유형으로 보는 일하는 방식' },
+  { key: 'ai', area: 'ai', no: '04', title: 'AI 영향도', sub: '할 수 있는가 · 얼마의 가치가 예상되는가 · 실제로 하고 있는가' },
+  { key: 'tools', area: 'ai', no: '05', title: '업무별 AI 도구 가용성', sub: '지금 회사 도구로 실제 가능한 업무는 무엇인가' },
+  { key: 'use', area: 'ai', no: '06', title: 'AI 위임 가능 업무', sub: 'AI 적용 가능성 × 스킬 수준으로 보는 위임 범위와 스킬 방향' },
+  { key: 'guide', area: 'ai', no: '07', title: 'AI 활용 가이드', sub: '업무별로 AI를 어떻게 쓰면 좋을까' },
 ] as const;
 
 /** 리포트 첫 줄: 입력한 데이터로 만든 한 문장 요약 */
@@ -37,9 +45,7 @@ const lvName = (v: number | null) => (v === null ? '미선택' : SKILL_LEVELS[Ma
 export default function WorkReport() {
   const { s, d } = useApp();
   const catalog = useSkillCatalog();
-  const { dx } = useResults();
   const m = useMemo(() => computeWorkMap(s.profile, catalog), [s.profile, catalog]);
-  const insights = useMemo(() => buildInsights(m, dx.firstExperiment), [m, dx.firstExperiment]);
   const [guide, setGuide] = useState(false);
   const p = s.profile;
   const meta = [p.dept, p.teamSize && `팀 ${p.teamSize}`, careerLabel(p)].filter(Boolean).join(' · ');
@@ -49,14 +55,15 @@ export default function WorkReport() {
     status: <StatusModule m={m} />,
     skill: <TaskSkillModule m={m} />,
     ai: <AiImpact />,
+    tools: <ToolsModule />,
+    guide: <GuideModule m={m} />,
     use: <SkillUseModule m={m} />,
     pattern: <PatternModule m={m} />,
-    next: <NextModule insights={insights} />,
   };
 
   return (
     <section className="wr">
-      <p className="eyebrow">STEP 3 · 나의 Work Mapping 진단 리포트</p>
+      <p className="eyebrow">STEP 3 · ① 업무현황 · ② AI 영향진단</p>
       <div className="wr-head card">
         <div>
           <small>{[jobLabel(p), meta].filter(Boolean).join(' · ')}</small>
@@ -68,15 +75,19 @@ export default function WorkReport() {
       {/* 책갈피: 누르면 그 모듈 위치로 이동, 스크롤하면 지금 읽는 모듈이 표시됨 */}
       <nav ref={navRef} className="bm-nav" aria-label="리포트 책갈피" style={{ top: topH }}>
         {MODULES.map((x, i) => (
-          <a key={x.key} href={`#wm-${x.key}`} className={`bm${active === i ? ' on' : ''}`} aria-current={active === i ? 'location' : undefined}
+          <a key={x.key} href={`#wm-${x.key}`} className={`bm${active === i ? ' on' : ''}${i > 0 && MODULES[i - 1].area !== x.area ? ' gap' : ''}`} aria-current={active === i ? 'location' : undefined}
             onClick={(e) => { e.preventDefault(); jump(i); }}>
+            {(i === 0 || MODULES[i - 1].area !== x.area) && <em className="bm-area">{AREAS.find((a) => a.key === x.area)!.no} {AREAS.find((a) => a.key === x.area)!.title}</em>}
             <span className="num">{x.no}</span>{x.title}
           </a>
         ))}
       </nav>
 
-      {MODULES.map((x) => (
+      {MODULES.map((x, i) => (
         <section key={x.key} id={`wm-${x.key}`} className="mod-sec mod-body" aria-labelledby={`wm-${x.key}-h`}>
+          {(i === 0 || MODULES[i - 1].area !== x.area) && (() => { const A = AREAS.find((a) => a.key === x.area)!; return (
+            <div className="area-head"><span>{A.no}</span><div><b>{A.title}</b><small>{A.sub}</small></div></div>
+          ); })()}
           <div className="mod-title">
             <span className="num">{x.no}</span>
             <div><h2 id={`wm-${x.key}-h`}>{x.title}</h2><p>{x.sub}</p></div>
@@ -85,7 +96,7 @@ export default function WorkReport() {
         </section>
       ))}
 
-      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: LAST_SUB })} onNext={() => d({ type: 'go', step: 3 })} nextLabel="AI 도입 시뮬레이션 시작" />
+      <StepNav onPrev={() => d({ type: 'go', step: 1, sub: LAST_SUB })} onNext={() => d({ type: 'go', step: 3 })} nextLabel="③ 생산성 시뮬레이터로" />
       {guide && <ReadingGuide onClose={() => setGuide(false)} />}
     </section>
   );
@@ -453,8 +464,13 @@ function PatternMap({ m }: { m: WorkMap }) {
 }
 
 /* ── 06 실행 인사이트 ── */
-function NextModule({ insights }: { insights: ReturnType<typeof buildInsights> }) {
-  const { d } = useApp();
+/** 실행 인사이트 목록 (④ 실행 인사이트 단계에서 사용) */
+export function InsightList() {
+  const { s } = useApp();
+  const catalog = useSkillCatalog();
+  const { dx } = useResults();
+  const m = useMemo(() => computeWorkMap(s.profile, catalog), [s.profile, catalog]);
+  const insights = useMemo(() => buildInsights(m, dx.firstExperiment), [m, dx.firstExperiment]);
   return (
     <>
       <ol className="insights">
@@ -466,14 +482,73 @@ function NextModule({ insights }: { insights: ReturnType<typeof buildInsights> }
         ))}
       </ol>
       {!insights.length && <p className="fine">업무와 스킬을 입력하면 다음 행동이 제안됩니다.</p>}
-      <div className="card exp">
-        <div>
-          <span className="eyebrow">다음 단계</span>
-          <h3>AI와 함께 일하면 무엇이 달라질까?</h3>
-          <p>진단한 업무로 AI 도입 전후의 시간·품질·위험 변화를 시뮬레이션해 보세요.</p>
-        </div>
-        <button className="btn primary" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 시작 →</button>
+    </>
+  );
+}
+
+/** ② 업무별 AI 도구 가용성: 연구 기준 노출 등급과 사내 도구 실현 가능 여부 */
+function ToolsModule() {
+  const { s } = useApp();
+  return (
+    <>
+      <div className="card soft">
+        <h3>지금 회사 도구로 실제로 AI를 쓸 수 있는 업무는?</h3>
+        <p>연구상 AI로 시간을 줄일 수 있는 업무라도, 지금 쓸 수 있는 AI 도구·권한이 없으면 실제로는 활용하기 어려워요. 업무마다 <b>연구 기준 등급</b>(E1 바로 가능 · E2 도구가 있으면 가능 · E0 어려움)과 <b>사내 실현 가능 여부</b>를 함께 봅니다. 사용 가능한 도구는 AI 활용 환경(Q.H) 응답 기준이에요.</p>
+      </div>
+      <ResearchCard profile={s.profile} />
+    </>
+  );
+}
+
+/** ② AI 활용 가이드: 업무마다 추천 활용 방식과 바로 써 볼 방법 */
+function GuideModule({ m }: { m: WorkMap }) {
+  const { s } = useApp();
+  const rows = researchDiagnosis(s.profile, 'beta').rows;
+  const list = m.tasks.map((t) => ({ t, g: guideFor(t, rows.find((r) => r.id === t.id)) }));
+  return (
+    <>
+      <p className="fine">AI 적용 가능성, 사내 도구 가용성, 내 스킬 수준을 함께 보고 업무마다 추천 활용 방식을 정리했어요. 생산성 시뮬레이터에서 이 방식으로 바꿨을 때의 시간 변화를 확인해 보세요.</p>
+      <div className="tbl-wrap">
+        <table className="tbl guide-tbl">
+          <thead><tr><th>업무</th><th className="r">AI 적용 가능성</th><th>사내 도구</th><th>위임 판단</th><th>추천 활용 방식</th><th>이렇게 써 보세요</th></tr></thead>
+          <tbody>
+            {list.map(({ t, g }) => (
+              <tr key={t.id} className={`g-${g.level}`}>
+                <td><b>{t.name}</b><small className="fine"> · {pct(t.share)}</small></td>
+                <td className="r num">{Math.round(t.ai * 100)}%</td>
+                <td>{g.tool}</td>
+                <td>{g.judge}</td>
+                <td><span className={`mode-tag ${g.level}`}>{g.mode}</span></td>
+                <td>{g.how}{g.warn && <small className="warn"> ⚠ {g.warn}</small>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );
+}
+
+type GuideRow = { tool: string; judge: string; mode: string; how: string; level: 'delegate' | 'with' | 'assist' | 'blocked'; warn?: string };
+function guideFor(t: TaskMatch, r: { feasible: number; e: string; frontier: boolean } | undefined): GuideRow {
+  const tool = !r ? '—' : r.feasible === 1 ? '가능' : r.feasible === 0.5 ? '일부 가능' : '어려움';
+  const warn = r?.frontier ? 'AI가 잘 못하는 업무에 많이 쓰고 있어요. 활용 범위를 줄이고 결과를 꼭 확인하세요.' : undefined;
+  if (r && r.feasible === 0 && t.ai >= AI_MID) {
+    return { tool, judge: '도구 확보 필요', mode: '도구·권한 확인 먼저', level: 'blocked', warn,
+      how: '연구상 AI로 줄일 수 있는 업무지만 지금 도구로는 어려워요. 팀에 쓸 수 있는 도구·권한을 확인하거나 요청하세요.' };
+  }
+  switch (t.quadrant) {
+    case 'delegate': return { tool, judge: 'AI 위임 가능', mode: '맡기기 (자동화형)', level: 'delegate', warn,
+      how: '초안·정리·반복 처리는 AI에 맡기고, 나는 기준표(체크리스트)로 결과를 검증해요. 잘 된 지시문은 팀과 공유하세요.' };
+    case 'learn': return { tool, judge: '부분 위임 · 학습 병행', mode: '배우기·검토받기 (증강형)', level: 'with', warn,
+      how: 'AI에게 "왜 이렇게 했는지" 설명을 요청하며 함께 작성하고, 결과는 선배나 기준 자료로 꼭 확인해요.' };
+    case 'core': return { tool, judge: '사람 중심 · AI 보조', mode: '함께 다듬기 (증강형)', level: 'assist', warn,
+      how: '자료 조사·초안 보조에만 AI를 쓰고 판단과 결정은 직접 해요. AI로 아낀 시간을 이 업무에 더 써 보세요.' };
+    case 'grow': return { tool, judge: '사람 중심 · 육성 우선', mode: '배우기 (증강형)', level: 'assist', warn,
+      how: '개념 학습이나 연습 상대로 AI를 쓰고, 실무 판단은 코칭과 함께 키워요.' };
+    default:
+      if (t.ai >= 0.5) return { tool, judge: 'AI 위임 후보', mode: '맡기기 (자동화형)', level: 'delegate', warn, how: '초안을 AI에 맡기고 검토하는 방식부터 시작해 보세요. 스킬을 연결하면 위임 판단이 더 정확해져요.' };
+      if (t.ai >= 0.3) return { tool, judge: '부분 활용', mode: '함께 다듬기 (증강형)', level: 'with', warn, how: '아이디어·초안을 AI와 주고받으며 함께 다듬어 보세요.' };
+      return { tool, judge: '사람 중심', mode: '보조로만 활용', level: 'assist', warn, how: '자료 찾기·요약 같은 보조 작업에만 AI를 써 보세요.' };
+  }
 }

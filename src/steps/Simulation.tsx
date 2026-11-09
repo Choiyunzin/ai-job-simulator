@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StepNav } from '../App';
 import { APPLICABILITY_MULT, E_POTENTIAL_COEF, FRONTIER_PENALTY, LABELS, LEVEL_PROFILE, REDESIGN, SIM, TYPE_PROFILE, automationCap } from '../engine/config';
-import { eLevelOf, isStd, outsideFrontier } from '../engine/research';
+import { eLevelOf, isStd, outsideFrontier, pct, researchDiagnosis } from '../engine/research';
 import { envFactors, fmtMin } from '../engine/simulate';
 import type { ComponentKey, RedesignToggle, TaskResult } from '../engine/types';
 import { Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
@@ -99,7 +99,7 @@ export default function Simulation() {
 
   return (
     <section className="sim">
-      <p className="eyebrow">STEP 4 · AI 도입 전후 생산성 시뮬레이션</p>
+      <p className="eyebrow">STEP 4 · ③ 생산성 시뮬레이터</p>
       <h1 className="h-screen">AI를 도입하면 내 업무는 얼마나 달라질까?</h1>
       <p className="fine">시간은 업무 비율 × 주 {s.profile.weeklyHours}시간 근무로 환산했습니다. 근무시간은 마지막 '미래의 나'에서 바꿔 볼 수 있어요.</p>
 
@@ -119,6 +119,8 @@ export default function Simulation() {
           </div>
         )}
       </div>
+
+      <RedesignScope />
 
       {/* 1. 결론 먼저: 지금 → AI만 → 재설계 */}
       <div className="card sim-summary">
@@ -168,7 +170,7 @@ export default function Simulation() {
       {/* 3. 재설계 항목 (바꾸면 위 결과가 바로 바뀜) */}
       <div className="card">
         <h3>업무 흐름 재설계 항목</h3>
-        <p className="fine">켜고 끄면 위의 '업무 흐름까지 재설계' 결과가 바로 바뀌어요.</p>
+        <p className="fine">켜고 끄면 위의 '업무 흐름까지 재설계' 결과가 바로 바뀌어요. ④ 실행 인사이트의 '활용 상황 미리 겪어 보기'에서 고른 대응도 여기에 더해집니다.</p>
         <div className="toggles">
           {(Object.keys(REDESIGN) as RedesignToggle[]).map((t) => (
             <label key={t} className={`toggle${s.toggles[t] ? ' on' : ''}`}>
@@ -195,7 +197,7 @@ export default function Simulation() {
         <EnvBasis />
       </details>
 
-      <StepNav onPrev={() => d({ type: 'go', step: 2 })} onNext={() => d({ type: 'go', step: 4 })} nextLabel="미래의 나 확인하기" />
+      <StepNav onPrev={() => d({ type: 'go', step: 2 })} onNext={() => d({ type: 'go', step: 4 })} nextLabel="④ 실행 인사이트로" />
     </section>
   );
 }
@@ -233,6 +235,41 @@ function BreakdownTable({ rows }: { rows: { label: string; segments: Segment[]; 
           <tr className="wait"><td>승인·대기 (경과시간, 합계 제외)</td>{rows.map((r) => <td key={r.label} className="r num">{cell(r.wait)}</td>)}</tr>
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** 전체 업무 기준: 연구상 단축 가능 → 사내 실현 가능 → 현재 활용 → 재설계 시 생산성, 그리고 재설계 가능 범위 */
+function RedesignScope() {
+  const { s } = useApp();
+  const { redesign } = useResults();
+  const r = researchDiagnosis(s.profile, 'beta');
+  const T = redesign.totals;
+  const total = redesign.tasks.reduce((x, t) => x + (t.task.share || 0), 0) || 1;
+  const scoped = redesign.tasks.filter((t) => t.reduction >= 0.05);
+  const scopeShare = scoped.reduce((x, t) => x + (t.task.share || 0), 0) / total;
+  const steps = [
+    { label: 'AI로 시간을 줄일 수 있는 업무', sub: '연구 기준 노출도', v: r.exposure },
+    { label: '그중 사내에서 실현 가능한 업무', sub: '지금 회사 도구·권한 기준', v: r.feasibleExposure },
+    { label: '지금 실제로 AI를 쓰는 업무', sub: '현재 활용도', v: r.usage },
+  ];
+  return (
+    <div className="card scope">
+      <h3>전체 업무 기준, AI로 얼마나 바꿀 수 있나요? <small>(업무 {redesign.tasks.length}개 전체)</small></h3>
+      <div className="scope-bars">
+        {steps.map((x) => (
+          <div key={x.label} className="scope-row">
+            <span className="sc-label">{x.label}<small>{x.sub}</small></span>
+            <span className="sc-track"><i style={{ width: `${Math.min(100, x.v * 100)}%` }} /></span>
+            <b className="num">{pct(x.v)}</b>
+          </div>
+        ))}
+      </div>
+      <div className="scope-out">
+        <div><span>업무 흐름 재설계 시 예상 생산성</span><b className="num">주 {fmtMin(Math.max(0, T.savedSameVolume))} 절감</b><small>지금 업무시간 대비 {T.savingRate.toFixed(1)}% · 같은 업무량 기준</small></div>
+        <div><span>재설계 가능 범위</span><b className="num">업무 {scoped.length}개 / {redesign.tasks.length}개</b><small>전체 업무시간의 {Math.round(scopeShare * 100)}% (AI가 직접작업을 5% 이상 덜어 주는 업무)</small></div>
+      </div>
+      <p className="fine">연구 기준과 사내 실현 가능의 차이는 도구·권한 문제, 사내 실현 가능과 현재 활용의 차이는 활용 역량 문제로 볼 수 있어요.</p>
     </div>
   );
 }
