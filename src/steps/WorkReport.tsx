@@ -14,13 +14,21 @@ import {
 import { LAST_SUB, REFLECT } from './ProfileStep';
 
 export const MODULES = [
-  { key: 'status', no: '01', title: '직무현황', sub: '직무와 업무 구성' },
-  { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '업무별 활동과 스킬' },
-  { key: 'ai', no: '03', title: 'AI 영향분석', sub: '업무별 AI 적용 가능성과 병목' },
-  { key: 'use', no: '04', title: '스킬 활용분석', sub: '시간 비중 대비 스킬 수준' },
-  { key: 'pattern', no: '05', title: '업무패턴', sub: '8가지 유형 기준 일하는 방식' },
-  { key: 'next', no: '06', title: '실행 인사이트', sub: '진단 결과에 따른 다음 행동' },
+  { key: 'status', no: '01', title: '직무현황', sub: '내 일은 어떻게 구성되어 있나요' },
+  { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크를 어떤 스킬로 하고 있나요' },
+  { key: 'ai', no: '03', title: 'AI 영향분석', sub: '지금 하는 일은 AI의 영향을 어떻게 받을까요' },
+  { key: 'use', no: '04', title: '스킬 활용분석', sub: '시간을 많이 쓰는 일에서 스킬은 어느 수준인가요' },
+  { key: 'pattern', no: '05', title: '업무패턴', sub: '나는 어떤 방식으로 일하고 있나요' },
+  { key: 'next', no: '06', title: '실행 인사이트', sub: '무엇부터 시작해 볼까요' },
 ] as const;
+
+/** 리포트 첫 줄: 입력한 데이터로 만든 한 문장 요약 */
+function headline(m: WorkMap): string {
+  const top = m.tasks[0];
+  if (!top) return '업무를 입력하면 진단 결과가 나와요';
+  const pattern = m.primary ? `, 일하는 방식은 ${ACTIVITY[m.primary].pattern}에 가까워요` : '';
+  return `${top.name}에 가장 많은 시간(${Math.round(top.share)}%)을 쓰고 있고${pattern}`;
+}
 
 const pct = (v: number) => `${Math.round(v * 10) / 10}%`;
 const h1 = (v: number) => `${Math.round(v * 10) / 10}시간`;
@@ -43,8 +51,8 @@ export default function WorkReport() {
     <section className="wr">
       <div className="wr-head card">
         <div>
-          <h1>진단 리포트 · {jobLabel(p)}</h1>
-          <small>{meta || '소속·경력 미입력'}</small>
+          <small>{[jobLabel(p), meta].filter(Boolean).join(' · ')}</small>
+          <h1>{headline(m)}</h1>
           {p.reflect !== null && p.reflect <= 2 && (
             <p className="warn">응답 반영도 '{REFLECT[p.reflect - 1]}'. 결과는 참고용입니다.</p>
           )}
@@ -55,15 +63,14 @@ export default function WorkReport() {
       <div ref={top} className="mod-nav" role="tablist" aria-label="진단 모듈">
         {MODULES.map((x, i) => (
           <button key={x.key} role="tab" aria-selected={mod === i} className={mod === i ? 'on' : ''} onClick={() => goMod(i)}>
-            <span className="num">{x.no}</span>{x.title}
+            {x.title}
           </button>
         ))}
       </div>
 
       <div className="mod-body" key={mod}>
         <div className="mod-title">
-          <span className="num">{MODULES[mod].no}</span>
-          <div><h2>{MODULES[mod].title}</h2><p>{MODULES[mod].sub}</p></div>
+          <h2>{MODULES[mod].title}</h2><p>{MODULES[mod].sub}</p>
         </div>
         {mod === 0 && <StatusModule m={m} />}
         {mod === 1 && <TaskSkillModule m={m} />}
@@ -196,8 +203,8 @@ function SkillUseModule({ m }: { m: WorkMap }) {
   return (
     <>
       <div className="card soft">
-        <h3>태스크 비중 × 스킬 수준</h3>
-        <p>비중이 큰 태스크에서 스킬 수준이 어느 정도인지 확인합니다. 스킬 보강이나 과업 조정 필요 여부를 판단하는 데 씁니다.</p>
+        <h3>비중 있는 일에서 스킬을 얼마나 쓰고 있나요</h3>
+        <p>태스크 비중과 스킬 수준을 맞대어, 내가 시간을 많이 쓰는 일에서 스킬이 어느 정도인지 봐요. 스킬을 보강할지, 일을 조정할지 생각해 볼 수 있어요.</p>
         <ul className="axis-notes">
           <li><b>가로축(X)</b> 응답한 태스크별 비중 — 어떤 일에 시간을 얼마나 쓰는지</li>
           <li><b>세로축(Y)</b> 태스크에 연결된 스킬의 본인 평가 평균 — 해당 태스크의 스킬 수준</li>
@@ -206,7 +213,7 @@ function SkillUseModule({ m }: { m: WorkMap }) {
         </ul>
       </div>
       {plotted.length ? <SkillMatchChart tasks={plotted} xMid={m.xMid} weekly={s.profile.weeklyHours} /> : (
-        <div className="card"><p className="fine">표시할 업무 없음. Q.B에서 업무별 스킬을 연결하고 Q.S에서 수준을 선택하세요.</p></div>
+        <div className="card"><p className="fine">아직 그래프에 올릴 업무가 없어요. 업무 정의에서 업무마다 스킬을 연결하고, 스킬 수준을 골라 주세요.</p></div>
       )}
       <div className="quad-grid">
         {(['boost', 'core', 'adjust', 'expand'] as Quadrant[]).map((q) => {
@@ -303,10 +310,9 @@ function PatternModule({ m }: { m: WorkMap }) {
       <div className="grid-pattern">
         <PatternMap m={m} />
         <div className="card">
-          <span className="eyebrow">가장 가까운 유형</span>
           {P ? (
             <>
-              <h3 className="pt-name">{P.pattern}
+              <h3 className="pt-name">가장 가까운 유형은 {P.pattern}
                 {m.secondary && <small> · 다음으로 {ACTIVITY[m.secondary].pattern}</small>}</h3>
               <p>{P.interp}</p>
               <ul className="hbars compact">
@@ -384,7 +390,7 @@ function PatternMap({ m }: { m: WorkMap }) {
           </div>
         )}
       </div>
-      <small>검은 점: 나의 위치(업무별 활동 좌표를 시간 비중으로 가중평균) · 파란 원: 시간 비중이 가장 큰 유형</small>
+      <small>'나' 점: 업무별 활동 좌표를 시간 비중으로 가중평균한 위치 · 테두리가 진한 원: 시간 비중이 가장 큰 유형</small>
     </div>
   );
 }
@@ -405,8 +411,8 @@ function NextModule({ insights }: { insights: ReturnType<typeof buildInsights> }
       {!insights.length && <p className="fine">업무·스킬 미입력</p>}
       <div className="card exp">
         <div>
-          <h3>다음 단계: AI 적용 시뮬레이션</h3>
-          <p>입력한 업무로 AI 적용 전후의 시간·품질·위험을 비교합니다.</p>
+          <h3>AI와 함께라면 무엇이 달라질까요?</h3>
+          <p>입력한 업무로 AI를 쓰기 전과 후의 시간·품질·위험을 비교해 볼 수 있어요.</p>
         </div>
         <button className="btn primary" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 시작</button>
       </div>

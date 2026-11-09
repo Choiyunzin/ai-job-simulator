@@ -41,8 +41,8 @@ export default function Events() {
 
   return (
     <section className="events">
-      <h1 className="h-screen">AI 적용 시 상황별 대응 <small className="fine">라운드 {s.round + 1}</small></h1>
-      <p className="lead-s">입력한 업무 기준으로 선정한 상황 {pair.length}개입니다. 상황마다 대응 방식을 하나 선택합니다.</p>
+      <h1 className="h-screen">AI와 일하다 보면 이런 상황도 생겨요 <small className="fine">라운드 {s.round + 1}</small></h1>
+      <p className="lead-s">입력한 업무에 맞춰 상황 {pair.length}개를 골랐어요. 나라면 어떻게 할지 하나씩 골라 보세요.</p>
 
       <div className="event-stack">
         {visible.map((e, i) => (

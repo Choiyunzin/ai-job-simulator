@@ -318,7 +318,7 @@ export function buildInsights(m: WorkMap, firstExperiment: { name: string; reaso
   const unlinked = m.tasks.filter((t) => t.score === null).length;
   if (unlinked && out.length < 5) {
     out.push({ tag: '진단 보완', title: `스킬이 연결되지 않은 업무 ${unlinked}개`,
-      body: 'Q.B에서 업무별 스킬을 연결하고 Q.S에서 수준을 선택하면 스킬 활용분석에 포함됩니다.' });
+      body: '업무 정의에서 업무마다 스킬을 연결하고 스킬 수준을 고르면 스킬 활용분석에 들어가요.' });
   }
   return out.slice(0, 5);
 }

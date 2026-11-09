@@ -10,6 +10,7 @@ import { useApp } from '../state';
 import { LEVELS, isEduPath, optionsAt, useJobCatalog } from '../jobCatalog';
 import { ACTIVITY, ACTIVITY_KEYS, SKILL_LEVELS, activityOf, levelDesc, skillsFor, useSkillCatalog } from '../workmap';
 import { ReadingGuide } from '../components/ReadingGuide';
+import { Icon } from '../components/Icon';
 import { currentRoles, isLeader, useRoleCatalog, type RoleRating } from '../roleCatalog';
 
 const SUBS = ['직무', '나의 역할', '업무 정의', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '나의 이야기'];
@@ -57,7 +58,7 @@ export default function ProfileStep() {
         {SUBS.map((x, i) => (
           <button key={x} className={i === sub ? 'now' : i < sub ? 'done' : ''}
             disabled={i > 2 && !tasksOk} onClick={() => go(i)}>
-            <span className="num">{CODES[i]}</span>{x}
+            <span className="num">{i + 1}</span>{x}
           </button>
         ))}
       </div>
@@ -76,7 +77,6 @@ export default function ProfileStep() {
 function QHead({ code, title, desc }: { code: string; title: string; desc?: string }) {
   return (
     <div className="qhead">
-      <span className="qcode num">{code}</span>
       <h2>{title}</h2>
       {desc && <p>{desc}</p>}
     </div>
@@ -157,7 +157,7 @@ function QJob({ catalog }: { catalog: Catalog }) {
 
   return (
     <div className="qcard">
-      <QHead code="Q.A" title="소속과 직무"
+      <QHead code="Q.A" title="어디에서 어떤 일을 하고 있나요?"
         desc={useList ? '소속과 직무를 알려 주세요. 직군부터 차례로 고르면 다음 칸에 해당하는 항목만 나옵니다.'
           : '소속과 직무를 알려 주세요. 업무 내용은 다음 질문에서 직접 정의합니다.'} />
       <div className="cascade">
@@ -257,7 +257,7 @@ function QRoles() {
 
   return (
     <div className="qcard wide">
-      <QHead code="Q.R" title="역할별 수행 수준"
+      <QHead code="Q.R" title="역할마다 어느 정도 해내고 있나요?"
         desc={`직무의 핵심 역할마다 지금 내 수준을 골라 주세요.${isLeader(p) ? ' 팀장·실장은 리더 역할도 함께 체크합니다.' : ''} 정답은 없으며, 결과는 리포트의 강점·보완 역할로 정리됩니다.`} />
       <div className="role-legend" aria-hidden="true">
         {ROLE_SCALE.map((l, i) => <span key={l}><b className="num">{i + 1}</b>{l}</span>)}
@@ -319,9 +319,14 @@ function QTasks() {
   const rest = Math.max(0, 100 - total);
   const [open, setOpen] = useState<string | null>(tasks[tasks.length - 1]?.id ?? null);
   const names = new Set(tasks.map((t) => t.name));
-  const examples = EDU_EXAMPLES.filter((e) => !names.has(e.name));
   const roleRows = useRoleCatalog();
-  const roleChoices = currentRoles(s.profile, roleRows).filter((r) => !names.has(r.role.slice(0, 30)));
+  const roleList = currentRoles(s.profile, roleRows);
+  /** 체크 목록: 같은 이름의 업무가 있으면 빼고, 없으면 추가 (최대 5개) */
+  const toggleByName = (name: string, task: Partial<Task>) => {
+    const ex = tasks.find((t) => t.name === name);
+    if (ex) { d({ type: 'removeTask', id: ex.id }); return; }
+    if (tasks.length < 5) d({ type: 'addTask', task });
+  };
   const std = stdTasksFor(s.profile);
   const pickedStd = tasks.filter((t) => t.taskId && std.some((x) => x.id === t.taskId)).length;
   const toggleStd = (x: StdTask) => {
@@ -336,10 +341,10 @@ function QTasks() {
 
   return (
     <div className="qcard wide">
-      <QHead code="Q.B" title="업무 정의"
+      <QHead code="Q.B" title="주로 하는 일을 적어 주세요"
         desc={std.length
-          ? '전체 업무를 100%로 보고 비중이 큰 업무부터 최대 5개까지 비율을 입력합니다. 표준 업무에서 먼저 고르고 없는 업무만 직접 입력합니다.'
-          : '전체 업무를 100%로 보고 비중이 큰 업무부터 최대 5개까지 비율을 입력합니다.'} />
+          ? '전체 일을 100%로 볼 때 비중이 큰 업무부터 5개까지 골라 주세요. 표준 업무에 없는 일만 직접 적으면 돼요.'
+          : '전체 일을 100%로 볼 때 비중이 큰 업무부터 5개까지 적어 주세요. 대략적인 비율이면 충분해요.'} />
 
       <div className={`hours-meter${over ? ' over' : ''}`}>
         <div className="hm-head">
@@ -349,7 +354,7 @@ function QTasks() {
         <div className="hm-track"><span style={{ width: `${Math.min(100, total)}%` }} /></div>
         {over
           ? <p className="warn">합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄여 주세요.</p>
-          : <small>추정치 입력 가능. 나머지 {fmtPct(rest)}는 회의·기타로 처리합니다.</small>}
+          : <small>남은 {fmtPct(rest)}는 회의·기타 업무로 계산해요.</small>}
       </div>
 
       {std.length > 0 && (
@@ -365,7 +370,7 @@ function QTasks() {
                 <li key={x.id}>
                   <button role="checkbox" aria-checked={on} className={`std-item${on ? ' on' : ''}`}
                     disabled={!on && tasks.length >= 5} onClick={() => toggleStd(x)}>
-                    <span className="box">{on ? '✓' : ''}</span>
+                    <span className="box">{on && <Icon name="check" size={14} />}</span>
                     <span className="std-text">{x.text}<small>{LABELS.type[x.type]}</small></span>
                   </button>
                 </li>
@@ -375,29 +380,21 @@ function QTasks() {
         </div>
       )}
 
-      {roleChoices.length > 0 && tasks.length < 5 && (
-        <div className="examples">
-          <span className="ex-label">나의 역할에서 불러오기 <small>(Q.R에서 체크한 역할 · 점수)</small></span>
-          <div className="chips">
-            {roleChoices.map((r) => (
-              <button key={r.role} className="chip add" onClick={() => d({ type: 'addTask', task: { name: r.role.slice(0, 30), share: 10 } })}>
-                + {r.group === 'leader' && <span className="chip-tag">리더</span>}{r.role}{r.score !== null && <span className="chip-score num"> {r.score}점</span>}
-              </button>
-            ))}
-          </div>
-        </div>
+      {roleList.length > 0 && (
+        <PickList title="나의 역할에서 불러오기" note="체크하면 아래 업무 목록에 추가되고, 해제하면 빠져요"
+          full={tasks.length >= 5}
+          items={roleList.map((r) => ({
+            key: r.role, label: r.role, on: names.has(r.role.slice(0, 30)),
+            meta: [r.group === 'leader' ? '리더 역할' : r.group === 'custom' ? '직접 추가한 역할' : '직무 역할', r.score !== null ? `${r.score}점 · ${ROLE_SCALE[r.score - 1]}` : '점수 없음'].join(' · '),
+          }))}
+          onToggle={(key) => toggleByName(key.slice(0, 30), { name: key.slice(0, 30), share: 10 })} />
       )}
 
-      {s.profile.job === 'edu' && examples.length > 0 && tasks.length < 5 && (
-        <div className="examples">
-          <span className="ex-label">교육기획 예시 업무</span>
-          <div className="chips">
-            {examples.map((e) => (
-              <button key={e.name} className="chip add" onClick={() => d({ type: 'addTask', task: e })}>+ {e.name}</button>
-            ))}
-            {tasks.length === 0 && <button className="chip solid" onClick={() => d({ type: 'loadExamples' })}>예시 5개 한 번에 불러오기</button>}
-          </div>
-        </div>
+      {s.profile.job === 'edu' && (
+        <PickList title="교육기획 예시 업무" note="자주 하는 일과 비슷하면 체크한 뒤 이름과 비율을 고쳐 쓰세요"
+          full={tasks.length >= 5}
+          items={EDU_EXAMPLES.map((e) => ({ key: e.name, label: e.name, on: names.has(e.name), meta: `${LABELS.type[e.type]} · 예시 비율 ${e.share}%` }))}
+          onToggle={(key) => { const e = EDU_EXAMPLES.find((x) => x.name === key); if (e) toggleByName(e.name, e); }} />
       )}
 
       <div className="task-list">
@@ -411,7 +408,7 @@ function QTasks() {
                 <span className="tname">{t.name || '새 업무'}</span>
                 <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)}
                   <em className={`src-badge ${isStd(t) ? 'res' : 'est'}`}>{eSourceLabel(t)}</em></span>
-                <span className="caret">{isOpen ? '▴' : '▾'}</span>
+                <span className="caret"><Icon name={isOpen ? 'up' : 'down'} /></span>
               </button>
               {err && <p className="err-msg">{err}</p>}
               {isOpen && <TaskEditor t={t} onRemove={() => d({ type: 'removeTask', id: t.id })} />}
@@ -422,6 +419,33 @@ function QTasks() {
       {tasks.length < 5 ? (
         <button className="btn dashed" onClick={() => { d({ type: 'addTask' }); setOpen(null); }}>{std.length ? '+ 목록에 없는 업무 직접 입력' : '+ 업무 직접 추가'} ({tasks.length}/5)</button>
       ) : <p className="fine">업무는 최대 5개까지 입력할 수 있습니다.</p>}
+    </div>
+  );
+}
+
+/** 세로 체크 목록: 한 줄에 항목 하나, 체크 = 업무로 추가 */
+function PickList({ title, note, items, full, onToggle }: {
+  title: string; note?: string; full: boolean;
+  items: { key: string; label: string; meta?: string; on: boolean }[]; onToggle: (key: string) => void;
+}) {
+  const picked = items.filter((x) => x.on).length;
+  return (
+    <div className="pick-list">
+      <div className="pl-head">
+        <b>{title}</b>
+        <small>{note}{note && ' · '}<span className="num">{picked}/{items.length}</span> 선택{full && ' · 업무 5개가 다 찼어요'}</small>
+      </div>
+      <ul>
+        {items.map((x) => (
+          <li key={x.key}>
+            <button role="checkbox" aria-checked={x.on} className={`pl-item${x.on ? ' on' : ''}`}
+              disabled={!x.on && full} onClick={() => onToggle(x.key)}>
+              <span className="box">{x.on && <Icon name="check" size={14} />}</span>
+              <span className="pl-text">{x.label}{x.meta && <small>{x.meta}</small>}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -524,8 +548,8 @@ function QSkills() {
   const rated = defs.filter((k) => typeof p.skillRatings?.[k.name] === 'number').length;
   return (
     <div className="qcard wide">
-      <QHead code="Q.S" title="스킬 수준"
-        desc="현재 실제로 수행 가능한 수준을 선택합니다. 업무에 연결한 스킬이 먼저 나옵니다." />
+      <QHead code="Q.S" title="스킬은 어느 수준인가요?"
+        desc="지금 혼자서 해낼 수 있는 수준을 골라 주세요. 업무에 연결한 스킬이 먼저 나와요." />
       <div className="role-legend" aria-hidden="true">
         {SKILL_LEVELS.map((l, i) => <span key={l.name}><b className="num">{i + 1}</b>{l.name}</span>)}
         <small className="num">{rated} / {defs.length}개 선택</small>
@@ -565,7 +589,7 @@ function QLevel() {
   const { s, d } = useApp();
   return (
     <div className="qcard wide">
-      <QHead code="Q.C" title="업무별 AI 활용 수준"
+      <QHead code="Q.C" title="지금 AI를 얼마나 쓰고 있나요?"
         desc="현재 활용 수준은 '이미 얻고 있는 효과'와 '남은 개선 여지'를 계산하는 데 쓰입니다. 높은 단계가 곧 높은 생산성을 뜻하지는 않습니다." />
       <div className="per-task">
         {s.profile.tasks.map((t) => (
@@ -606,7 +630,7 @@ function QApplicability() {
   const { s, d } = useApp();
   return (
     <div className="qcard wide">
-      <QHead code="Q.D" title="업무별 AI 적용 가능성"
+      <QHead code="Q.D" title="AI를 어디까지 쓸 수 있을까요?"
         desc="직접 판단해 주세요. 직접 입력한 업무는 이 답으로 잠재력을 계산하고, 표준 업무는 연구 기준 등급으로 계산한 뒤 내 판단과의 차이를 보여줘요." />
       <div className="per-task">
         {s.profile.tasks.map((t) => {
@@ -657,13 +681,13 @@ function QAiEnv() {
   const env = s.profile.env;
   return (
     <div className="qcard wide">
-      <QHead code="Q.H" title="사용 가능한 AI 도구" desc="여러 개 고를 수 있습니다. 쓸 수 있는 도구가 없으면 도입 준비 시간이 더 크게 잡힙니다." />
+      <QHead code="Q.H" title="회사에서 쓸 수 있는 AI 도구" desc="여러 개 고를 수 있습니다. 쓸 수 있는 도구가 없으면 도입 준비 시간이 더 크게 잡힙니다." />
       <div className="choice-grid">
         {(Object.keys(ENV.tools) as AiTool[]).map((t) => {
           const on = env.tools.includes(t);
           return (
             <button key={t} className={`pick${on ? ' on' : ''}`} aria-pressed={on} onClick={() => d({ type: 'toggleTool', t })}>
-              <span className="box">{on ? '✓' : ''}</span>{ENV.tools[t]}
+              <span className="box">{on && <Icon name="check" size={14} />}</span>{ENV.tools[t]}
             </button>
           );
         })}
@@ -672,11 +696,11 @@ function QAiEnv() {
         ? <small className="warn">쓸 수 있는 도구를 모르면 연구 기준 진단에서 '사내 실현 가능'을 절반만 반영해요. 팀에 사용 가능 도구를 확인해 보세요.</small>
         : <small>고른 도구에 따라 STEP 3에서 '연구상 AI로 가능한 업무' 중 지금 회사 도구로 실제 가능한 비중을 계산해요.</small>}
       <div className="divider" />
-      <QHead code="Q.H-2" title="팀의 AI 활용 방식" desc="함께 쓰는 팀일수록 지시문을 다시 만들고 도구를 익히는 시간이 줄어듭니다." />
+      <QHead code="Q.H-2" title="우리 팀은 AI를 어떻게 쓰나요?" desc="함께 쓰는 팀일수록 지시문을 다시 만들고 도구를 익히는 시간이 줄어듭니다." />
       <OptionCards<TeamCulture> name="팀의 AI 활용 방식" value={env.culture} options={ENV.culture}
         onChange={(v) => d({ type: 'env', patch: { culture: v } })} />
       <div className="divider" />
-      <QHead code="Q.H-3" title="주당 AI 학습 가능 시간" desc="꾸준히 익힐수록 AI 결과물을 고치는 시간이 줄어든다고 가정합니다." />
+      <QHead code="Q.H-3" title="AI를 익히는 데 쓸 수 있는 시간" desc="꾸준히 익힐수록 AI 결과물을 고치는 시간이 줄어든다고 가정합니다." />
       <OptionCards<LearningTime> name="AI 학습 가능 시간" value={env.learning} options={ENV.learning}
         onChange={(v) => d({ type: 'env', patch: { learning: v } })} />
     </div>
@@ -688,7 +712,7 @@ function QStory() {
   const n = s.profile.notes;
   return (
     <div className="qcard wide">
-      <QHead code="Q.I" title="자유 의견" desc="선택 문항. 최종 리포트에 포함됩니다." />
+      <QHead code="Q.I" title="하고 싶은 이야기가 있나요?" desc="선택 사항이에요. 적은 내용은 최종 리포트에 담겨요." />
       <div className="field">
         <label htmlFor="note-pain">AI의 도움을 가장 먼저 받고 싶은 업무 고민</label>
         <textarea id="note-pain" rows={3} maxLength={300} value={n.pain}
@@ -704,7 +728,7 @@ function QStory() {
         <small>{n.tips.length}/300</small>
       </div>
       <div className="divider" />
-      <QHead code="Q.I-2" title="응답 반영도" desc="이번 응답이 실제 업무를 얼마나 반영하는지 선택합니다. 결과 해석과 문항 개선에 씁니다." />
+      <QHead code="Q.I-2" title="이번 응답이 내 일을 잘 담았나요?" desc="결과를 읽을 때 참고하고, 문항을 다듬는 데 써요." />
       <div className="seg reflect" role="radiogroup" aria-label="응답 반영 정도">
         {REFLECT.map((l, i) => (
           <button key={l} role="radio" aria-checked={s.profile.reflect === i + 1} className={s.profile.reflect === i + 1 ? 'on' : ''}

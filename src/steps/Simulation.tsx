@@ -65,7 +65,7 @@ export default function Simulation() {
 
   return (
     <section className="sim">
-      <h1 className="h-screen">AI 적용 전후 비교</h1>
+      <h1 className="h-screen">AI를 쓰면 이 일은 얼마나 달라질까요?</h1>
       <p className="fine">시간은 업무 비율 × 주 {s.profile.weeklyHours}시간 근무로 환산했습니다. 근무시간은 마지막 '미래의 나'에서 바꿔 볼 수 있어요.</p>
 
       <div className="sim-pick">

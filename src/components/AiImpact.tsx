@@ -81,8 +81,7 @@ export function AiImpact() {
       {dx.firstExperiment && (
         <div className="card exp">
           <div>
-            <span className="eyebrow">가장 먼저 실험해볼 업무</span>
-            <h3>{dx.firstExperiment.name}</h3>
+            <h3>먼저 실험해 볼 업무: {dx.firstExperiment.name}</h3>
             <p>{dx.firstExperiment.reason}</p>
           </div>
           <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션</button>

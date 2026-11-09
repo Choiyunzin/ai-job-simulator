@@ -27,7 +27,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand" onClick={() => d({ type: 'go', step: 0 })} role="button" tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && d({ type: 'go', step: 0 })}>
-          <span><b>AI와 함께 일하기 시뮬레이터</b><small>업무 진단 · AI 적용 시뮬레이션</small></span>
+          <span><b>AI와 함께 일하기 시뮬레이터</b><small>내 일 진단 · AI 시뮬레이션</small></span>
         </div>
         <div className="top-actions">
           {confirm ? (
@@ -62,7 +62,7 @@ export default function App() {
         <Screen />
       </main>
       <footer className="foot">
-        수치는 입력값과 가정에 따른 교육용 추정치입니다. 입력값은 이 브라우저에만 저장됩니다.
+        모든 수치는 입력값과 가정으로 계산한 교육용 추정치예요. 입력한 내용은 이 브라우저에만 저장돼요.
       </footer>
     </div>
   );

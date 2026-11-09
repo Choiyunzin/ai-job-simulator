@@ -16,8 +16,8 @@ import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
-const TASK_COLORS = ['#9a9a9a', '#b2b2b2', '#c6c6c6', '#d8d8d8', '#e8e8e8'];
-const INVEST_COLORS = ['#1f4fd1', '#2b2b2b', '#5c5c5c', '#8a8a8a', '#b4b4b4', '#d6d6d6'];
+const TASK_COLORS = ['#a39c8e', '#b6b0a3', '#c8c2b6', '#d9d4ca', '#e8e4dc'];
+const INVEST_COLORS = ['#0f6b5f', '#2e2a24', '#5c574d', '#8b8579', '#b6b0a3', '#d9d4ca'];
 
 export default function Future() {
   const { s, d } = useApp();
@@ -55,7 +55,7 @@ export default function Future() {
 
   return (
     <section className="future">
-      <h1 className="h-screen">근무시간 기준 결과와 재투자 계획</h1>
+      <h1 className="h-screen">아낀 시간, 어디에 쓸까요?</h1>
 
       <WorkweekSim hours={s.profile.weeklyHours} onChange={(h) => d({ type: 'profile', patch: { weeklyHours: h } })}
         redesign={redesign} after={after} bands={bands} />

@@ -30,7 +30,6 @@ export function WorkweekSim({ hours, onChange, redesign, after, bands }: {
   return (
     <div className={`band whatif${negative ? ' neg' : ''}`}>
       <div className="whatif-q">
-        <span className="band-title">직접 시뮬레이션해 보기</span>
         <h3>주당 근무시간이 <b className="num">{hours}</b>시간이라면?</h3>
         <div className="whatif-ctl">
           <div className="seg small" role="radiogroup" aria-label="주당 근무시간 빠른 선택">
