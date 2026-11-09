@@ -799,3 +799,37 @@ ul.dots { margin: 0; padding-left: 18px; display: flex; flex-direction: column; 
 .pl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pl-text small { font-size: 12px; color: var(--fg-dim); }
 .wr-head h1 { word-break: keep-all; }
+
+/* ── 생산성 시뮬레이션: 결론 먼저 ── */
+.sim-pick select:disabled { opacity: 0.5; }
+.sim-summary { gap: 16px; border-color: rgba(91, 140, 255, 0.35); }
+.ss-head h2 { font-family: var(--font-display); font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; }
+.ss-head p { font-size: 13px; color: var(--fg-dim); margin-top: 2px; }
+.ss-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.ss-steps li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 12px; background: var(--bg-2); min-width: 0; }
+.ss-steps li:not(:last-child)::after { content: '→'; position: absolute; right: -22px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--fg-faint); }
+.ss-steps li.hi { background: rgba(157, 123, 255, 0.12); outline: 1px solid rgba(157, 123, 255, 0.45); }
+.ss-label { font-size: 13px; font-weight: 600; color: var(--fg-dim); }
+.ss-steps li.hi .ss-label { color: var(--violet); }
+.ss-steps b { font-size: clamp(22px, 3vw, 28px); font-weight: 600; line-height: 1.2; }
+.ss-steps .pill { align-self: flex-start; }
+.ss-steps small { font-size: 12px; color: var(--fg-faint); }
+@media (max-width: 720px) {
+  .ss-steps { grid-template-columns: 1fr; gap: 22px; }
+  .ss-steps li:not(:last-child)::after { content: '↓'; right: auto; left: 50%; top: auto; bottom: -21px; transform: translateX(-50%); }
+}
+.sim-summary .insight { font-size: 15px; line-height: 1.65; }
+.sim-summary .insight b { color: var(--fg); }
+.ss-quality { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; font-size: 14px; color: var(--fg-dim); }
+.ss-quality b { color: var(--fg); font-size: 16px; }
+.ss-quality small { font-size: 12px; color: var(--fg-faint); }
+.breakdown { border-top: 1px solid var(--line); padding-top: 10px; }
+.breakdown summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--fg-dim); }
+.breakdown[open] summary { margin-bottom: 10px; color: var(--fg); }
+.breakdown-tbl { min-width: 480px; }
+.breakdown-tbl th, .breakdown-tbl td { padding: 7px 10px; }
+.breakdown-tbl th.r, .breakdown-tbl td.r { text-align: right; }
+.breakdown-tbl tr.ai-row td:first-child { color: var(--blue); }
+.breakdown-tbl tr.sum td { font-weight: 700; border-top: 1.5px solid var(--line-strong); }
+.breakdown-tbl tr.wait td { color: var(--fg-faint); }
+.breakdown-tbl th:last-child, .breakdown-tbl td:last-child { background: rgba(157, 123, 255, 0.07); }

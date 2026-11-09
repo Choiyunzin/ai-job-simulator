@@ -4,7 +4,7 @@ import { APPLICABILITY_MULT, E_POTENTIAL_COEF, FRONTIER_PENALTY, LABELS, LEVEL_P
 import { eLevelOf, isStd, outsideFrontier } from '../engine/research';
 import { envFactors, fmtMin } from '../engine/simulate';
 import type { ComponentKey, RedesignToggle, TaskResult } from '../engine/types';
-import { CountUp, Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
+import { Delta, ScenarioBars, useReducedMotion, type Segment } from '../components/viz';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
 
@@ -53,15 +53,47 @@ export default function Simulation() {
 
   const rows = scope === 'task'
     ? [
-      { label: 'AI 적용 전', segments: beforeSegments(ra, k), wait: ra.before.wait / k },
-      { label: 'AI 적용 후', segments: afterSegments(ra, k), wait: ra.after.wait / k },
-      { label: '전체 업무 흐름 재설계 후', segments: [...afterSegments(rr, k), { key: 'overhead', label: '재설계 준비(체크리스트·템플릿)', value: redesignOverheadShare / k, color: COLORS.overhead }], wait: rr.after.wait / k, highlight: true },
+      { label: '지금 방식', segments: beforeSegments(ra, k), wait: ra.before.wait / k },
+      { label: 'AI만 적용', segments: afterSegments(ra, k), wait: ra.after.wait / k },
+      { label: '업무 흐름까지 재설계', segments: [...afterSegments(rr, k), { key: 'overhead', label: '재설계 준비(체크리스트·템플릿)', value: redesignOverheadShare / k, color: COLORS.overhead }], wait: rr.after.wait / k, highlight: true },
     ]
     : [
-      { label: 'AI 적용 전', segments: sumTasks(after.tasks, beforeSegments), wait: after.totals.beforeWait },
-      { label: 'AI 적용 후', segments: sumTasks(after.tasks, afterSegments), wait: after.totals.afterWait },
-      { label: '전체 업무 흐름 재설계 후', segments: [...sumTasks(redesign.tasks, afterSegments), { key: 'overhead', label: '재설계 준비(체크리스트·템플릿)', value: redesign.totals.overhead, color: COLORS.overhead }], wait: redesign.totals.afterWait, highlight: true },
+      { label: '지금 방식', segments: sumTasks(after.tasks, beforeSegments), wait: after.totals.beforeWait },
+      { label: 'AI만 적용', segments: sumTasks(after.tasks, afterSegments), wait: after.totals.afterWait },
+      { label: '업무 흐름까지 재설계', segments: [...sumTasks(redesign.tasks, afterSegments), { key: 'overhead', label: '재설계 준비(체크리스트·템플릿)', value: redesign.totals.overhead, color: COLORS.overhead }], wait: redesign.totals.afterWait, highlight: true },
     ];
+  // 막대는 의미 두 가지(사람이 하던 일 / AI 때문에 새로 생긴 일)로 묶어서 보여 줍니다. 세부 항목은 표로.
+  const grouped = rows.map((r) => ({ ...r, segments: groupSegments(r.segments) }));
+
+  const S = scope === 'task'
+    ? {
+      title: ra.task.name, unit: uLabel,
+      before: rows[0] ? sumSeg(rows[0].segments) : 0, after: sumSeg(rows[1].segments), redesign: sumSeg(rows[2].segments),
+      waits: [rows[0].wait, rows[1].wait, rows[2].wait],
+      savingAfter, savingRedesign,
+      quality: [ra.before.quality, rr.after.quality], risk: [ra.before.risk, rr.after.risk],
+      extra: ra.after.volumeGrowth > 0.005 ? { pct: ra.after.volumeGrowth * 100, h: ra.after.extraVolumeLabor } : null,
+    }
+    : {
+      title: '전체 업무 합계', unit: '주당',
+      before: sumSeg(rows[0].segments), after: sumSeg(rows[1].segments), redesign: sumSeg(rows[2].segments),
+      waits: [rows[0].wait, rows[1].wait, rows[2].wait],
+      savingAfter: after.totals.savingRate, savingRedesign: redesign.totals.savingRate,
+      quality: [redesign.totals.beforeQuality, redesign.totals.afterQuality], risk: [redesign.totals.beforeRisk, redesign.totals.afterRisk],
+      extra: after.totals.extraVolumeLabor > 0.05 ? { pct: null as number | null, h: after.totals.extraVolumeLabor } : null,
+    };
+  const subject = scope === 'task' ? `'${ra.task.name}'` : '전체 업무';
+  const verdict = S.before <= 0 ? null : (
+    <>
+      {S.savingAfter < 10
+        ? <>AI가 초안을 빨리 만들어도 검토·재작업·관리 시간이 생겨서, {subject}의 실제 절감은 <b>{S.savingAfter.toFixed(1)}%</b>에 그쳐요. </>
+        : <>AI만 적용해도 {subject}은 <b>{S.savingAfter.toFixed(1)}%</b> 줄어요. </>}
+      {S.savingRedesign > S.savingAfter
+        ? <>업무 흐름까지 재설계하면 <b>{S.savingRedesign.toFixed(1)}%</b>까지 커져요.</>
+        : <>재설계 준비 시간이 아직 효과보다 커요. 아래 재설계 항목을 바꿔 보세요.</>}
+      {S.extra && <> 다만 빨라진 만큼 요청이 {S.extra.pct !== null ? `약 ${S.extra.pct.toFixed(0)}% ` : ''}늘어 주당 {fmtMin(S.extra.h)}이 더 들 수 있어요.</>}
+    </>
+  );
 
   return (
     <section className="sim">
@@ -71,55 +103,70 @@ export default function Simulation() {
 
       <div className="sim-pick">
         <label htmlFor="simtask">시뮬레이션할 업무</label>
-        <select id="simtask" value={taskId} onChange={(e) => d({ type: 'simTask', id: e.target.value })}>
+        <select id="simtask" value={taskId} disabled={scope === 'all'} onChange={(e) => d({ type: 'simTask', id: e.target.value })}>
           {after.tasks.map((r) => <option key={r.task.id} value={r.task.id}>{r.task.name}</option>)}
         </select>
-        <div className="seg small" role="radiogroup" aria-label="시간 단위">
-          <button className={unit === 'week' ? 'on' : ''} aria-checked={unit === 'week'} role="radio" onClick={() => setUnit('week')}>주당</button>
-          <button className={unit === 'each' ? 'on' : ''} aria-checked={unit === 'each'} role="radio" onClick={() => setUnit('each')}>건당</button>
+        <div className="seg small" role="radiogroup" aria-label="비교 범위">
+          <button className={scope === 'task' ? 'on' : ''} role="radio" aria-checked={scope === 'task'} onClick={() => setScope('task')}>이 업무</button>
+          <button className={scope === 'all' ? 'on' : ''} role="radio" aria-checked={scope === 'all'} onClick={() => setScope('all')}>전체 업무</button>
         </div>
-      </div>
-
-      <div className="task-banner">
-        <h2>{ra.task.name}</h2>
-        <p>{LABELS.type[ra.task.type]} · {LABELS.frequency[ra.task.frequency]}(주 {ra.occurrencesPerWeek}건) · 현재 AI {ra.task.aiLevel}단계 · 적용 가능성 {LABELS.applicability[ra.task.applicability].title}</p>
-      </div>
-
-      <FlowRunner ra={ra} k={k} uLabel={uLabel} savingAfter={savingAfter} />
-
-      <div className="card">
-        <div className="card-head">
-          <h3>세 가지 결과 비교 <small>({scope === 'task' ? `${uLabel} · ${ra.task.name}` : '주당 · 전체 업무 합계'})</small></h3>
-          <div className="seg small" role="radiogroup" aria-label="비교 범위">
-            <button className={scope === 'task' ? 'on' : ''} role="radio" aria-checked={scope === 'task'} onClick={() => setScope('task')}>이 업무</button>
-            <button className={scope === 'all' ? 'on' : ''} role="radio" aria-checked={scope === 'all'} onClick={() => setScope('all')}>전체 업무</button>
+        {scope === 'task' && (
+          <div className="seg small" role="radiogroup" aria-label="시간 단위">
+            <button className={unit === 'week' ? 'on' : ''} aria-checked={unit === 'week'} role="radio" onClick={() => setUnit('week')}>주당</button>
+            <button className={unit === 'each' ? 'on' : ''} aria-checked={unit === 'each'} role="radio" onClick={() => setUnit('each')}>건당</button>
           </div>
-        </div>
-        <ScenarioBars rows={rows} note="막대 길이는 실제 투입 노동시간입니다. 빗금 구간은 승인·대기로 흘러간 경과시간으로, 노동시간 합계에는 포함하지 않습니다." />
-        <div className="kpis">
-          <Kpi label="AI 적용 후 절감률" value={scope === 'task' ? savingAfter : after.totals.savingRate} suffix="%" />
-          <Kpi label="재설계 후 절감률" value={scope === 'task' ? savingRedesign : redesign.totals.savingRate} suffix="%" strong />
-          <Kpi label="품질 점수(100점)" value={scope === 'task' ? rr.after.quality : redesign.totals.afterQuality} decimals={0}
-            delta={(scope === 'task' ? rr.after.quality - ra.before.quality : redesign.totals.afterQuality - redesign.totals.beforeQuality)} goodWhen="up" />
-          <Kpi label="오류 위험 점수" value={scope === 'task' ? rr.after.risk : redesign.totals.afterRisk} decimals={0}
-            delta={(scope === 'task' ? rr.after.risk - ra.before.risk : redesign.totals.afterRisk - redesign.totals.beforeRisk)} goodWhen="down" />
-        </div>
-        {sumSeg(rows[0].segments) > 0 && (
-          <p className="insight">
-            {savingAfter < 10
-              ? `AI가 초안을 빨리 만들어도 검토·재작업·관리 시간이 생겨 '${ra.task.name}'의 실제 절감은 ${savingAfter.toFixed(1)}%에 그칩니다. `
-              : `AI만 도입해도 '${ra.task.name}'은 ${savingAfter.toFixed(1)}% 줄어듭니다. `}
-            {savingRedesign > savingAfter
-              ? `흐름 전체를 재설계하면 ${savingRedesign.toFixed(1)}%까지 커집니다.`
-              : '재설계 준비 시간이 아직 효과보다 큽니다. 아래 재설계 항목을 바꿔보세요.'}
-            {ra.after.volumeGrowth > 0.005 && ` 다만 빨라진 만큼 요청이 약 ${(ra.after.volumeGrowth * 100).toFixed(0)}% 늘어나 주당 ${fmtMin(ra.after.extraVolumeLabor)}이 추가로 들 수 있습니다.`}
-          </p>
         )}
       </div>
 
+      {/* 1. 결론 먼저: 지금 → AI만 → 재설계 */}
+      <div className="card sim-summary">
+        <div className="ss-head">
+          <h2>{S.title}</h2>
+          {scope === 'task'
+            ? <p>{LABELS.type[ra.task.type]} · {LABELS.frequency[ra.task.frequency]}(주 {ra.occurrencesPerWeek}건) · 현재 AI {ra.task.aiLevel}단계 · 적용 가능성 {LABELS.applicability[ra.task.applicability].title}</p>
+            : <p>입력한 업무 {after.tasks.length}개를 모두 더한 값이에요.</p>}
+        </div>
+        <ol className="ss-steps">
+          <li>
+            <span className="ss-label">지금 방식</span>
+            <b className="num">{fmtMin(S.before)}</b>
+            <small>{S.unit} 투입 · 대기 {fmtMin(S.waits[0])}</small>
+          </li>
+          <li>
+            <span className="ss-label">AI만 적용</span>
+            <b className="num">{fmtMin(S.after)}</b>
+            <span className={`pill ${S.savingAfter >= 0 ? 'good' : 'bad'}`}>{S.savingAfter >= 0 ? '절감' : '증가'} {Math.abs(S.savingAfter).toFixed(1)}%</span>
+            <small>{S.unit} 투입 · 대기 {fmtMin(S.waits[1])}</small>
+          </li>
+          <li className="hi">
+            <span className="ss-label">업무 흐름까지 재설계</span>
+            <b className="num">{fmtMin(S.redesign)}</b>
+            <span className={`pill ${S.savingRedesign >= 0 ? 'good' : 'bad'}`}>{S.savingRedesign >= 0 ? '절감' : '증가'} {Math.abs(S.savingRedesign).toFixed(1)}%</span>
+            <small>{S.unit} 투입 · 대기 {fmtMin(S.waits[2])}</small>
+          </li>
+        </ol>
+        {verdict && <p className="insight">{verdict}</p>}
+        <div className="ss-quality">
+          <span>품질 점수 <b className="num">{S.quality[1].toFixed(0)}</b>점 <Delta value={S.quality[1] - S.quality[0]} goodWhen="up" decimals={0} unit="점" /> <small>높을수록 좋음</small></span>
+          <span>오류 위험 점수 <b className="num">{S.risk[1].toFixed(0)}</b>점 <Delta value={S.risk[1] - S.risk[0]} goodWhen="down" decimals={0} unit="점" /> <small>낮을수록 좋음</small></span>
+          <small>재설계 후 기준, 지금 방식과 비교</small>
+        </div>
+      </div>
+
+      {/* 2. 어디서 줄고 어디서 늘었나 */}
       <div className="card">
-        <h3>전체 업무 흐름 재설계 항목</h3>
-        <p className="fine">켜고 끄면 '재설계 후' 결과가 바로 바뀝니다. 다음 단계의 상황 대응 선택도 여기에 더해집니다.</p>
+        <h3>시간은 어디서 줄고, 어디서 늘었나요? <small>({S.unit} · {S.title})</small></h3>
+        <ScenarioBars rows={grouped} note="AI가 직접 작업을 덜어 주는 대신 지시·결과 검토·재작업·관리 시간이 새로 생겨요. 빗금은 승인·대기로 흘러간 경과시간이라 투입 시간 합계에는 넣지 않았어요." />
+        <details className="breakdown">
+          <summary>항목별 시간 표로 보기</summary>
+          <BreakdownTable rows={rows} />
+        </details>
+      </div>
+
+      {/* 3. 재설계 항목 (바꾸면 위 결과가 바로 바뀜) */}
+      <div className="card">
+        <h3>업무 흐름 재설계 항목</h3>
+        <p className="fine">켜고 끄면 위의 '업무 흐름까지 재설계' 결과가 바로 바뀌어요. 다음 단계의 상황 대응 선택도 여기에 더해집니다.</p>
         <div className="toggles">
           {(Object.keys(REDESIGN) as RedesignToggle[]).map((t) => (
             <label key={t} className={`toggle${s.toggles[t] ? ' on' : ''}`}>
@@ -129,6 +176,13 @@ export default function Simulation() {
             </label>
           ))}
         </div>
+      </div>
+
+      {/* 4. 업무 흐름으로 직접 보기 */}
+      <div className="card">
+        <h3>업무 흐름으로 보기 <small>· {ra.task.name}</small></h3>
+        <p className="fine">버튼을 누르면 기존 방식과 AI 도입 후의 업무가 단계별로 처리되는 모습을 볼 수 있어요.</p>
+        <FlowRunner ra={ra} k={k} uLabel={uLabel} savingAfter={savingAfter} />
       </div>
 
       <Adjuster ra={ra} />
@@ -144,22 +198,47 @@ export default function Simulation() {
   );
 }
 
+const GROUP_COLORS = { human: '#A9B4CC', ai: '#4F86F7' };
+const HUMAN_KEYS = ['direct', 'review'];
+
+function groupSegments(segs: Segment[]): Segment[] {
+  const sum = (f: (x: Segment) => boolean) => segs.filter(f).reduce((a, x) => a + x.value, 0);
+  return [
+    { key: 'human', label: '사람이 하던 일 (직접 작업·기존 검토)', value: sum((x) => HUMAN_KEYS.includes(x.key)), color: GROUP_COLORS.human },
+    { key: 'ai', label: 'AI 때문에 새로 생긴 일 (지시·결과 검토·재작업·관리·재설계 준비)', value: sum((x) => !HUMAN_KEYS.includes(x.key)), color: GROUP_COLORS.ai },
+  ];
+}
+
+/** 항목 × 세 가지 방식 표 */
+function BreakdownTable({ rows }: { rows: { label: string; segments: Segment[]; wait: number }[] }) {
+  const keys: { key: string; label: string }[] = [];
+  rows.forEach((r) => r.segments.forEach((x) => { if (!keys.some((k) => k.key === x.key)) keys.push({ key: x.key, label: x.label }); }));
+  const val = (r: { segments: Segment[] }, key: string) => r.segments.find((x) => x.key === key)?.value ?? 0;
+  const total = (r: { segments: Segment[] }) => r.segments.reduce((a, x) => a + x.value, 0);
+  const cell = (v: number) => (v > 0.0005 ? fmtMin(v) : '—');
+  return (
+    <div className="tbl-wrap">
+      <table className="tbl breakdown-tbl">
+        <thead><tr><th>항목</th>{rows.map((r) => <th key={r.label} className="r">{r.label}</th>)}</tr></thead>
+        <tbody>
+          {keys.map((k) => (
+            <tr key={k.key} className={HUMAN_KEYS.includes(k.key) ? '' : 'ai-row'}>
+              <td>{k.label}</td>
+              {rows.map((r) => <td key={r.label} className="r num">{cell(val(r, k.key))}</td>)}
+            </tr>
+          ))}
+          <tr className="sum"><td>투입 시간 합계</td>{rows.map((r) => <td key={r.label} className="r num">{fmtMin(total(r))}</td>)}</tr>
+          <tr className="wait"><td>승인·대기 (경과시간, 합계 제외)</td>{rows.map((r) => <td key={r.label} className="r num">{cell(r.wait)}</td>)}</tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function sumTasks(rs: TaskResult[], f: (r: TaskResult) => Segment[]): Segment[] {
   const base = rs[0] ? f(rs[0]).map((s) => ({ ...s, value: 0 })) : [];
   rs.forEach((r) => f(r).forEach((s, i) => { base[i].value += s.value; }));
   return base;
-}
-
-function Kpi({ label, value, suffix = '', decimals = 1, delta, goodWhen, strong }: {
-  label: string; value: number; suffix?: string; decimals?: number; delta?: number; goodWhen?: 'up' | 'down'; strong?: boolean;
-}) {
-  return (
-    <div className={`kpi${strong ? ' strong' : ''}`}>
-      <span>{label}</span>
-      <b><CountUp value={value} decimals={decimals} suffix={suffix} /></b>
-      {delta !== undefined && <Delta value={delta} goodWhen={goodWhen} decimals={0} unit="점" />}
-    </div>
-  );
 }
 
 // ── 업무 흐름 애니메이션 (계산값과 동일한 시간을 누적) ──
@@ -253,8 +332,9 @@ function FlowLane({ title, nodes, p, uLabel, active, ai, dim }: {
   const total = weights.reduce((a, b) => a + b, 0);
   let acc = 0;
   const per = weights.map((w) => { const st = acc / total; acc += w; return Math.max(0, Math.min(1, (p - st) / (w / total))); });
-  const labor = nodes.reduce((x, n, i) => x + n.labor * per[i], 0);
-  const wait = nodes.reduce((x, n, i) => x + n.wait * per[i], 0);
+  const idle = p === 0 && !active; // 실행 전에는 0분 대신 전체 값을 미리 보여 줌
+  const labor = nodes.reduce((x, n, i) => x + n.labor * (idle ? 1 : per[i]), 0);
+  const wait = nodes.reduce((x, n, i) => x + n.wait * (idle ? 1 : per[i]), 0);
   return (
     <div className={`lane${ai ? ' lane-ai' : ''}${dim ? ' dim' : ''}${active ? ' active' : ''}`}>
       <div className="lane-head">
