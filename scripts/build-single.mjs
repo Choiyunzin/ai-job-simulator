@@ -23,7 +23,7 @@ const result = await build({
 const js = result.outputFiles.find((f) => f.path.endsWith('.js')).text;
 const css = result.outputFiles.find((f) => f.path.endsWith('.css')).text;
 
-const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Orbit&display=swap">';
+const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Hahmlet:wght@500;700;800&display=swap">';
 const safeJs = js.replace(/<\/script/gi, '<\\/script');
 const page = `<title>AI 업무혁신 시뮬레이터</title>
 ${fonts}

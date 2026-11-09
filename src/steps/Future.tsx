@@ -16,8 +16,8 @@ import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
-const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
-const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#A98BF0'];
+const TASK_COLORS = ['#a39272', '#b8aa8c', '#cbbfa4', '#dbd2bd', '#e8e1d2'];
+const INVEST_COLORS = ['#d64816', '#1c3f8c', '#1c1914', '#b8860b', '#7d93c4', '#b9ae96'];
 
 export default function Future() {
   const { s, d } = useApp();
