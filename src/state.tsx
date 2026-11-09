@@ -7,7 +7,7 @@ import type {
 
 export interface AppState {
   step: number;           // 0~5
-  sub: number;            // STEP 2 내부 질문 화면 0~4
+  sub: number;            // STEP 2 내부 질문 화면 번호
   profile: Profile;
   overrides: Overrides;
   simTaskId: string | null;
@@ -97,7 +97,6 @@ function baseReducer(s: AppState, a: Action): AppState {
       ...s, profile: { ...s.profile, tasks: s.profile.tasks.map((t) => (t.id === a.id ? { ...t, ...a.patch } : t)) },
     };
     case 'addTask':
-      if (s.profile.tasks.length >= 5) return s;
       return { ...s, profile: { ...s.profile, tasks: [...s.profile.tasks, { ...blankTask(), ...a.task, id: newId() }] } };
     case 'removeTask': {
       const overrides = { ...s.overrides }; delete overrides[a.id];
@@ -107,9 +106,8 @@ function baseReducer(s: AppState, a: Action): AppState {
       };
     }
     case 'loadExamples': {
-      const room = 5 - s.profile.tasks.length;
       const names = new Set(s.profile.tasks.map((t) => t.name));
-      const add = EDU_EXAMPLES.filter((e) => !names.has(e.name)).slice(0, room).map((e) => ({ ...e, id: newId() }));
+      const add = EDU_EXAMPLES.filter((e) => !names.has(e.name)).map((e) => ({ ...e, id: newId() }));
       return { ...s, profile: { ...s.profile, tasks: [...s.profile.tasks, ...add] } };
     }
     case 'toggleCriterion': {
@@ -171,6 +169,9 @@ function load(): AppState {
           career: { ...base.profile.career, ...(saved.profile?.career ?? {}) },
         },
       };
+      // 상황 대응 단계를 없앴으므로, 예전에 고른 상황 선택이 결과에 섞이지 않게 비웁니다.
+      loaded.choices = {};
+      if (loaded.step > 4) loaded.step = 4;
       // 예전 버전에서 직책만 저장된 경우 직책자 여부를 채웁니다.
       const c = loaded.profile.career;
       if (!c.leader && c.position) c.leader = c.position.startsWith('없음') ? 'no' : 'yes';

@@ -170,9 +170,11 @@ export function toCSV(r: Report): string {
   r.tasks.forEach((t) => lines.push([t.name, t.sharePct, t.eLevel, t.eSource, t.feasible, t.aiMode, t.perception ?? '', t.type, t.frequency, t.importance, t.aiLevel, t.applicability,
     t.beforeHours, t.afterAiHours, t.redesignHours, t.reductionPct, t.qualityAfter, t.riskAfter].map(esc).join(',')));
   lines.push('');
-  lines.push('상황,선택,대응');
-  r.eventChoices.forEach((e) => lines.push([e.event, e.choice, e.action].map(esc).join(',')));
-  lines.push('');
+  if (r.eventChoices.length) {
+    lines.push('상황,선택,대응');
+    r.eventChoices.forEach((e) => lines.push([e.event, e.choice, e.action].map(esc).join(',')));
+    lines.push('');
+  }
   lines.push('재투자 활동,시간');
   r.reinvest.forEach((x) => lines.push(`${esc(x.activity)},${x.hours}`));
   return lines.join('\n');

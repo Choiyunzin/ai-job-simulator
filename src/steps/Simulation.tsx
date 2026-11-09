@@ -35,6 +35,8 @@ export default function Simulation() {
 
   const taskId = (s.simTaskId && after.tasks.some((r) => r.task.id === s.simTaskId) ? s.simTaskId : null)
     ?? dx.firstExperiment?.id ?? after.tasks[0]?.task.id;
+  // 처음 정해진 업무를 고정해 둡니다. (고정하지 않으면 시간을 직접 조정할 때 '먼저 실험해 볼 업무'가 바뀌면서 화면의 업무가 바뀔 수 있음)
+  useEffect(() => { if (!s.simTaskId && taskId) d({ type: 'simTask', id: taskId }); }, [s.simTaskId, taskId]); // eslint-disable-line react-hooks/exhaustive-deps
   const ra = after.tasks.find((r) => r.task.id === taskId);
   const rr = redesign.tasks.find((r) => r.task.id === taskId);
   if (!ra || !rr) {
@@ -166,7 +168,7 @@ export default function Simulation() {
       {/* 3. 재설계 항목 (바꾸면 위 결과가 바로 바뀜) */}
       <div className="card">
         <h3>업무 흐름 재설계 항목</h3>
-        <p className="fine">켜고 끄면 위의 '업무 흐름까지 재설계' 결과가 바로 바뀌어요. 다음 단계의 상황 대응 선택도 여기에 더해집니다.</p>
+        <p className="fine">켜고 끄면 위의 '업무 흐름까지 재설계' 결과가 바로 바뀌어요.</p>
         <div className="toggles">
           {(Object.keys(REDESIGN) as RedesignToggle[]).map((t) => (
             <label key={t} className={`toggle${s.toggles[t] ? ' on' : ''}`}>
@@ -193,7 +195,7 @@ export default function Simulation() {
         <EnvBasis />
       </details>
 
-      <StepNav onPrev={() => d({ type: 'go', step: 2 })} onNext={() => d({ type: 'go', step: 4 })} nextLabel="상황 대응해 보기" />
+      <StepNav onPrev={() => d({ type: 'go', step: 2 })} onNext={() => d({ type: 'go', step: 4 })} nextLabel="미래의 나 확인하기" />
     </section>
   );
 }
@@ -395,7 +397,7 @@ function Adjuster({ ra }: { ra: TaskResult }) {
   return (
     <details className="card adjust">
       <summary>
-        <span><b>시간 구성 직접 조정하기</b><small>내 경험에 맞게 각 항목의 주당 시간을 바꿔보세요{n ? ` · ${n}개 조정됨` : ''}</small></span>
+        <span><b>시간 구성 직접 조정하기</b><small>내 경험에 맞게 각 항목의 주당 시간을 막대로 조절하거나 숫자로 직접 입력해 보세요{n ? ` · ${n}개 조정됨` : ''}</small></span>
       </summary>
       {(['before', 'after'] as const).map((g) => (
         <div key={g} className="adj-group">
@@ -409,7 +411,11 @@ function Adjuster({ ra }: { ra: TaskResult }) {
                 <label htmlFor={id}>{a.label}{a.elapsed && <em>경과시간</em>}</label>
                 <input id={id} type="range" min={0} max={max} step={0.05} value={Math.min(max, v)}
                   onChange={(e) => d({ type: 'override', taskId: ra.task.id, key: a.key, value: Number(e.target.value) })} />
-                <span className="num">{v.toFixed(2)}h</span>
+                <span className="hour-in">
+                  <input type="number" className="num-in" min={0} step={0.1} value={Math.round(v * 100) / 100} aria-label={`${a.label} 직접 입력(시간)`}
+                    onChange={(e) => { const n = Number(e.target.value); if (e.target.value !== '' && Number.isFinite(n) && n >= 0) d({ type: 'override', taskId: ra.task.id, key: a.key, value: n }); }} />
+                  <small>시간</small>
+                </span>
                 {ov[a.key] !== undefined && <button className="btn tiny ghost" onClick={() => d({ type: 'override', taskId: ra.task.id, key: a.key, value: null })}>기본값</button>}
               </div>
             );

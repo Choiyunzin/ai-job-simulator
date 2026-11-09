@@ -38,7 +38,7 @@ node scripts/build-single.mjs --list 목록.tsv --out ai-job-simulator-사내.ht
 
 ## 1-2. Work Mapping 진단 (직무현황 · 태스크&스킬 · AI 영향분석 · 스킬 활용분석 · 업무패턴 · 실행 인사이트)
 
-STEP 2 응답을 마치면 **해석법 팝업**(사실로 읽기 · 의미로 읽기 · 가능성으로 읽기)이 뜨고, STEP 3 **진단 리포트**가 6개 모듈로 나옵니다.
+STEP 2 응답을 마치면 **해석법 팝업**(사실로 읽기 · 의미로 읽기 · 가능성으로 읽기)이 뜨고, STEP 3 **진단 리포트**가 6개 모듈로 한 페이지에 이어서 나오고, 위쪽 책갈피를 누르면 해당 모듈로 이동합니다.
 
 | 모듈 | 내용 |
 |---|---|
@@ -74,13 +74,12 @@ src/
 │  ├─ config.ts         ★ 모든 가정값·라벨·상황 카드·환경 배수·재설계 규칙 (여기만 고치면 됨)
 │  ├─ simulate.ts       업무별 AI 도입 전/후/재설계 시간·품질·위험 계산
 │  └─ diagnose.ts       유형 판정, TOP3, 병목, 상황 카드 추천, 주의사항, 다음 실험
-├─ steps/               6단계 화면
+├─ steps/               5단계 화면
 │  ├─ Intro.tsx         STEP 1 인트로
-│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A·Q.R·Q.B·Q.S·Q.C·Q.D·Q.H·Q.I, 8개 질문 화면 · 업무는 비율(%)로 입력)
+│  ├─ ProfileStep.tsx   STEP 2 업무 프로파일 (Q.A·Q.R·Q.B-1 업무 고르기·Q.B-2 업무 구체화·Q.S·Q.C·Q.D·Q.H·Q.I, 9개 질문 화면 · 업무 개수 제한 없음)
 │  ├─ WorkReport.tsx    STEP 3 Work Mapping 진단 리포트 (6개 모듈)
 │  ├─ Simulation.tsx    STEP 4 전후 시뮬레이션 (흐름 애니메이션, 3개 결과 비교, 시간 조정)
-│  ├─ Events.tsx        STEP 5 상황 대응 게임 (파일명은 Events 그대로)
-│  └─ Future.tsx        STEP 6 미래의 나 (대시보드, 재투자, 리포트, 내보내기)
+│  └─ Future.tsx        STEP 5 미래의 나 (대시보드, 재투자, 리포트, 내보내기)
 ├─ components/AiImpact.tsx     진단 리포트 03 AI 영향분석 (기존 유형 진단 화면)
 ├─ components/ReadingGuide.tsx 해석법 팝업
 ├─ workmap.ts           Work Mapping 계산(활동 8유형·스킬 목록·스킬 매치·사분면·실행 인사이트)
@@ -90,7 +89,7 @@ src/
 ├─ roleCatalog.ts       역할 목록 읽기·역할 진단(Q.R)
 ├─ taskCatalog.ts       표준 Task 목록 읽기(F-21)
 ├─ submit.ts            결과 제출(Power Automate 전송)
-├─ components/SubmitCard.tsx  STEP 6 결과 제출 카드
+├─ components/SubmitCard.tsx  STEP 5 결과 제출 카드
 ├─ engine/research.ts   글로벌 연구 기준 진단 계산(F-22)
 ├─ components/ResearchCard.tsx  STEP 3 연구 기준 진단 카드
 ├─ state.tsx            전체 상태(useReducer) + 브라우저 자동 저장
@@ -104,7 +103,7 @@ docs/index.html           GitHub Pages 배포본 (dist/ai-job-simulator.html 복
 ## 4. 핵심 계산 로직 (`engine/simulate.ts`)
 
 업무는 **전체 업무 중 비율(%)**로 입력하고, 주당 시간은 `h = 기준 근무시간 × 비율`로 환산합니다(합계는 100% 이하, 나머지는 회의·기타).
-처음에는 주 40시간 근무로 환산하고, 마지막 **STEP 6 '미래의 나'에서 "주당 근무시간이 ○○시간이라면?"을 직접 바꿔** 볼 수 있습니다(빠른 선택 40·52시간, 30~68시간 조절). 근무시간을 바꾸면 모든 수치가 다시 계산되고, 40시간·52시간일 때의 절감 시간을 나란히 비교해 보여줍니다.
+처음에는 주 40시간 근무로 환산하고, 마지막 **STEP 5 '미래의 나'에서 "주당 근무시간이 ○○시간이라면?"을 직접 바꿔** 볼 수 있습니다(빠른 선택 40·52시간, 30~68시간 조절). 근무시간을 바꾸면 모든 수치가 다시 계산되고, 40시간·52시간일 때의 절감 시간을 나란히 비교해 보여줍니다.
 도구 유지관리·재설계 준비 같은 고정 시간이 있어 52시간 값이 40시간 값의 정확히 1.3배가 되지는 않습니다. 빠른 선택 값은 `config.ts`의 `HOUR_BASES`에서 바꿀 수 있습니다.
 
 업무 하나의 주당 시간 `h`를 기준으로 계산합니다. 모든 값은 **주당 시간**이며, 화면에서 '건당'을 고르면 주당 발생 건수로 나눠 보여줍니다.
@@ -178,7 +177,7 @@ docs/index.html           GitHub Pages 배포본 (dist/ai-job-simulator.html 복
 | `APPLICABILITY_MULT` | 적용 가능성 배수 |
 | `SIM` | 공통 상수 (대체율 상한, 재작업 비용, 검토 적발률, 요청 증가, 품질·위험 계수 등) |
 | `REDESIGN` | STEP 4 재설계 토글 4개와 효과 |
-| `EVENTS` | STEP 5 상황 카드 4개, 선택지 문구, 선택별 레버 |
+| `EVENTS` | (상황 대응 단계는 삭제됨 · 데이터만 남아 있음) |
 | `EVENT_AFFINITY` | 상황 카드 개인화 규칙 |
 | `ENV` | 일하는 환경 설문(Q.G·Q.H) 선택지와 계산 배수 |
 | `CRITERIA_WEIGHTS` | 성공 기준별 '가장 효과적인 선택' 가중치 |

@@ -1,5 +1,5 @@
 // STEP 3 진단 리포트: 직무현황 · 태스크&스킬 · AI 영향분석 · 스킬 활용분석 · 업무패턴 · 실행 인사이트
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StepNav } from '../App';
 import { AiImpact } from '../components/AiImpact';
 import { ReadingGuide } from '../components/ReadingGuide';
@@ -40,12 +40,19 @@ export default function WorkReport() {
   const { dx } = useResults();
   const m = useMemo(() => computeWorkMap(s.profile, catalog), [s.profile, catalog]);
   const insights = useMemo(() => buildInsights(m, dx.firstExperiment), [m, dx.firstExperiment]);
-  const [mod, setMod] = useState(0);
   const [guide, setGuide] = useState(false);
-  const top = useRef<HTMLDivElement>(null);
-  const goMod = (i: number) => { setMod(i); top.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
   const p = s.profile;
   const meta = [p.dept, p.teamSize && `팀 ${p.teamSize}`, careerLabel(p)].filter(Boolean).join(' · ');
+  const { active, topH, jump, navRef } = useBookmarks(MODULES.map((x) => `wm-${x.key}`));
+
+  const bodies: Record<(typeof MODULES)[number]['key'], ReactNode> = {
+    status: <StatusModule m={m} />,
+    skill: <TaskSkillModule m={m} />,
+    ai: <AiImpact />,
+    use: <SkillUseModule m={m} />,
+    pattern: <PatternModule m={m} />,
+    next: <NextModule insights={insights} />,
+  };
 
   return (
     <section className="wr">
@@ -61,35 +68,68 @@ export default function WorkReport() {
         <button className="btn ghost" onClick={() => setGuide(true)}>해석법 보기</button>
       </div>
 
-      <div ref={top} className="mod-nav" role="tablist" aria-label="진단 모듈">
+      {/* 책갈피: 누르면 그 모듈 위치로 이동, 스크롤하면 지금 읽는 모듈이 표시됨 */}
+      <nav ref={navRef} className="bm-nav" aria-label="리포트 책갈피" style={{ top: topH }}>
         {MODULES.map((x, i) => (
-          <button key={x.key} role="tab" aria-selected={mod === i} className={mod === i ? 'on' : ''} onClick={() => goMod(i)}>
+          <a key={x.key} href={`#wm-${x.key}`} className={`bm${active === i ? ' on' : ''}`} aria-current={active === i ? 'location' : undefined}
+            onClick={(e) => { e.preventDefault(); jump(i); }}>
             <span className="num">{x.no}</span>{x.title}
-          </button>
+          </a>
         ))}
-      </div>
+      </nav>
 
-      <div className="mod-body" key={mod}>
-        <div className="mod-title">
-          <span className="num">{MODULES[mod].no}</span>
-          <div><h2>{MODULES[mod].title}</h2><p>{MODULES[mod].sub}</p></div>
-        </div>
-        {mod === 0 && <StatusModule m={m} />}
-        {mod === 1 && <TaskSkillModule m={m} />}
-        {mod === 2 && <AiImpact />}
-        {mod === 3 && <SkillUseModule m={m} />}
-        {mod === 4 && <PatternModule m={m} />}
-        {mod === 5 && <NextModule insights={insights} />}
-        <div className="mod-pager">
-          {mod > 0 ? <button className="btn ghost" onClick={() => goMod(mod - 1)}>← {MODULES[mod - 1].title}</button> : <span />}
-          {mod < MODULES.length - 1 && <button className="btn" onClick={() => goMod(mod + 1)}>{MODULES[mod + 1].title} →</button>}
-        </div>
-      </div>
+      {MODULES.map((x) => (
+        <section key={x.key} id={`wm-${x.key}`} className="mod-sec mod-body" aria-labelledby={`wm-${x.key}-h`}>
+          <div className="mod-title">
+            <span className="num">{x.no}</span>
+            <div><h2 id={`wm-${x.key}-h`}>{x.title}</h2><p>{x.sub}</p></div>
+          </div>
+          {bodies[x.key]}
+        </section>
+      ))}
 
       <StepNav onPrev={() => d({ type: 'go', step: 1, sub: LAST_SUB })} onNext={() => d({ type: 'go', step: 3 })} nextLabel="AI 도입 시뮬레이션 시작" />
       {guide && <ReadingGuide onClose={() => setGuide(false)} />}
     </section>
   );
+}
+
+/** 책갈피 내비: 상단 고정 바 높이를 재서 그 아래에 붙고, 스크롤 위치로 현재 모듈을 표시 */
+function useBookmarks(ids: string[]) {
+  const [active, setActive] = useState(0);
+  const [topH, setTopH] = useState(0);
+  const navRef = useRef<HTMLElement>(null);
+  const offset = () => topH + (navRef.current?.offsetHeight ?? 0) + 12;
+  useEffect(() => {
+    const measure = () => setTopH(document.querySelector<HTMLElement>('.topbar')?.offsetHeight ?? 0);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+  useEffect(() => {
+    const onScroll = () => {
+      const off = offset() + 8;
+      let cur = 0;
+      ids.forEach((id, i) => { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top - off <= 0) cur = i; });
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) cur = ids.length - 1;
+      setActive(cur);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [topH]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { // 휴대폰처럼 책갈피가 가로로 넘칠 때, 현재 책갈피가 보이도록 가로 스크롤
+    const nav = navRef.current; const el = nav?.querySelector<HTMLElement>('.bm.on');
+    if (nav && el && nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: el.offsetLeft - nav.clientWidth / 2 + el.clientWidth / 2 });
+  }, [active]);
+  const jump = (i: number) => {
+    const el = document.getElementById(ids[i]);
+    if (!el) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset(), behavior: reduce ? 'auto' : 'smooth' });
+    setActive(i);
+  };
+  return { active, topH, jump, navRef };
 }
 
 /* ── 01 직무현황: 내 일은 이렇게 구성되어 있다 ── */
@@ -218,7 +258,7 @@ function SkillUseModule({ m }: { m: WorkMap }) {
         </ul>
       </div>
       {plotted.length ? <SkillMatchChart tasks={plotted} xMid={m.xMid} weekly={s.profile.weeklyHours} /> : (
-        <div className="card"><p className="fine">스킬이 연결되고 수준이 선택된 업무가 아직 없어요. 업무 정의(Q.B)에서 업무마다 스킬을 연결하고, 스킬 수준(Q.S)을 골라 주세요.</p></div>
+        <div className="card"><p className="fine">스킬이 연결되고 수준이 선택된 업무가 아직 없어요. 업무 구체화(Q.B-2)에서 업무마다 스킬을 연결하고, 스킬 수준(Q.S)을 골라 주세요.</p></div>
       )}
       <div className="quad-grid">
         {(['boost', 'core', 'adjust', 'expand'] as Quadrant[]).map((q) => {

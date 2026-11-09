@@ -7,7 +7,7 @@ export default function Intro() {
   return (
     <section className="intro">
       <div className="intro-copy">
-        <p className="eyebrow">AI와 함께 일하기 · 6 STAGES</p>
+        <p className="eyebrow">AI와 함께 일하기 · {STEPS.length} STAGES</p>
         <h1>AI와 함께라면,<br />내 일은 어떻게<br />달라질까?</h1>
         <p className="lead">AI가 덜어줄 일과 새로 생길 일,<br />내 업무로 직접 확인해 봐요.</p>
         <p className="body">
@@ -18,7 +18,7 @@ export default function Intro() {
           <button className="btn primary big" onClick={() => d({ type: 'go', step: 1, sub: resumed ? s.sub : 0 })}>
             {resumed ? '이어서 하기' : '시작하기'} →
           </button>
-          <span className="meta">⏱ 약 5~8분 · 총 6단계</span>
+          <span className="meta">⏱ 약 10분 · 총 {STEPS.length}단계</span>
         </div>
         <ol className="stage-list">
           {STEPS.map((x, i) => <li key={x}><b className="num">{String(i + 1).padStart(2, '0')}</b>{x}</li>)}

@@ -4,10 +4,9 @@ import Intro from './steps/Intro';
 import ProfileStep from './steps/ProfileStep';
 import WorkReport from './steps/WorkReport';
 import Simulation from './steps/Simulation';
-import Events from './steps/Events';
 import Future from './steps/Future';
 
-export const STEPS = ['인트로', '업무 프로파일', '진단 리포트', '생산성 시뮬레이션', '상황 대응', '미래의 나'];
+export const STEPS = ['인트로', '업무 프로파일', '진단 리포트', '생산성 시뮬레이션', '미래의 나'];
 
 export const profileReady = (tasks: { name: string; hours: number }[]) =>
   tasks.some((t) => t.name.trim() && t.hours > 0);
@@ -20,7 +19,8 @@ export default function App() {
 
   useEffect(() => { top.current?.scrollIntoView({ block: 'start' }); }, [s.step, s.sub]);
 
-  const Screen = [Intro, ProfileStep, WorkReport, Simulation, Events, Future][s.step] ?? Intro;
+  const step = Math.min(Math.max(0, s.step), STEPS.length - 1);
+  const Screen = [Intro, ProfileStep, WorkReport, Simulation, Future][step] ?? Intro;
 
   return (
     <div className="app" ref={top}>
@@ -42,14 +42,14 @@ export default function App() {
           )}
         </div>
         <nav className="progress" aria-label="진행 단계">
-          <div className="progress-bar"><span style={{ width: `${(s.step / (STEPS.length - 1)) * 100}%` }} /></div>
+          <div className="progress-bar"><span style={{ width: `${(step / (STEPS.length - 1)) * 100}%` }} /></div>
           <ol>
             {STEPS.map((label, i) => {
               const reachable = i <= 1 || ready;
-              const state = i < s.step ? 'done' : i === s.step ? 'now' : 'todo';
+              const state = i < step ? 'done' : i === step ? 'now' : 'todo';
               return (
                 <li key={label} className={state}>
-                  <button disabled={!reachable} aria-current={i === s.step ? 'step' : undefined}
+                  <button disabled={!reachable} aria-current={i === step ? 'step' : undefined}
                     onClick={() => d({ type: 'go', step: i })}>
                     <i>{state === 'done' ? '✓' : i + 1}</i><span>{label}</span>
                   </button>
@@ -59,7 +59,7 @@ export default function App() {
           </ol>
         </nav>
       </header>
-      <main key={s.step} className={`screen screen-${s.step}`}>
+      <main key={step} className={`screen screen-${step}`}>
         <Screen />
       </main>
       <footer className="foot">

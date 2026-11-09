@@ -93,7 +93,7 @@ export default function Future() {
             <li className="sum"><span>재투자할 수 있는 시간</span><b className="num">{fmtH(T.freeTime)}</b></li>
           </ul>
           {T.freeTime <= 0.05 && (
-            <p className="warn">늘어난 요청과 관리 시간이 절감분을 모두 가져갔습니다. 상황 대응이나 재설계 항목을 바꿔 다시 시뮬레이션해 보세요.</p>
+            <p className="warn">늘어난 요청과 관리 시간이 절감분을 모두 가져갔습니다. 생산성 시뮬레이션의 재설계 항목을 바꿔 다시 확인해 보세요.</p>
           )}
         </div>
         <Donut segments={donut} center={fmtH(T.actualLabor + allocated)} sub="미래의 주당 시간" />
@@ -104,7 +104,7 @@ export default function Future() {
           <h3>확보한 시간 재투자하기</h3>
           <span className={`pill ${overAlloc ? 'bad' : 'good'}`}><span className="num">{allocated.toFixed(1)} / {free.toFixed(1)}</span>시간</span>
         </div>
-        {overAlloc && <p className="warn">⚠ 확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더를 줄여 주세요.</p>}
+        {overAlloc && <p className="warn">⚠ 확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더나 숫자를 줄여 주세요.</p>}
         <div className="invest">
           {items.map((it, i) => {
             const v = s.reinvest[it.key] ?? 0;
@@ -114,7 +114,11 @@ export default function Future() {
                 <label htmlFor={id}><i style={{ background: INVEST_COLORS[i] }} />{it.label}</label>
                 <input id={id} type="range" min={0} max={Math.max(0.5, Math.ceil(free * 2) / 2)} step={0.5} value={v}
                   onChange={(e) => d({ type: 'reinvest', key: it.key, v: Number(e.target.value) })} disabled={free <= 0} />
-                <span className="num">{v.toFixed(1)}h</span>
+                <span className="hour-in">
+                  <input type="number" className="num-in" min={0} step={0.5} value={v} aria-label={`${it.label} 시간 직접 입력`} disabled={free <= 0}
+                    onChange={(e) => { const n = Number(e.target.value); if (e.target.value !== '' && Number.isFinite(n) && n >= 0) d({ type: 'reinvest', key: it.key, v: n }); }} />
+                  <small>시간</small>
+                </span>
               </div>
             );
           })}
@@ -216,11 +220,10 @@ export default function Future() {
       </details>
 
       <div className="endbar">
-        <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>🎲 다른 상황으로 다시 해보기</button>
         <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>↻ 시뮬레이션 다시 보기</button>
         <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>✎ 업무 수정하기</button>
       </div>
-      <StepNav onPrev={() => d({ type: 'go', step: 4 })} />
+      <StepNav onPrev={() => d({ type: 'go', step: 3 })} />
     </section>
   );
 }

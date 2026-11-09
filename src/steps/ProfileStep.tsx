@@ -12,8 +12,10 @@ import { ACTIVITY, ACTIVITY_KEYS, SKILL_LEVELS, activityOf, levelDesc, skillsFor
 import { ReadingGuide } from '../components/ReadingGuide';
 import { currentRoles, isLeader, useRoleCatalog, type RoleRating } from '../roleCatalog';
 
-const SUBS = ['직무', '나의 역할', '업무 정의', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '나의 이야기'];
-const CODES = ['QA', 'QR', 'QB', 'QS', 'QC', 'QD', 'QH', 'QI'];
+const SUBS = ['직무', '나의 역할', '업무 고르기', '업무 구체화', '스킬 수준', 'AI 활용 수준', 'AI 적용 가능성', 'AI 활용 환경', '나의 이야기'];
+const CODES = ['QA', 'QR', 'QB1', 'QB2', 'QS', 'QC', 'QD', 'QH', 'QI'];
+/** 화면 번호 */
+export const SUB = { job: 0, roles: 1, pick: 2, detail: 3 } as const;
 export const LAST_SUB = SUBS.length - 1;
 
 export const taskError = (t: Task): string | null => {
@@ -30,6 +32,7 @@ export default function ProfileStep() {
   const tasks = s.profile.tasks;
   const shareTotal = tasks.reduce((x, t) => x + (t.share || 0), 0);
   const tasksOk = tasks.length > 0 && tasks.every((t) => !taskError(t)) && shareTotal <= 100 + 1e-9;
+  const pickOk = tasks.length > 0 && tasks.every((t) => t.name.trim());
   const subNav = useRef<HTMLDivElement>(null);
   useEffect(() => { // 모바일에서 현재 질문 탭이 보이도록 가로 스크롤
     const el = subNav.current?.querySelector<HTMLElement>('.now');
@@ -40,14 +43,16 @@ export default function ProfileStep() {
   const catalog = useJobCatalog();
   const [guide, setGuide] = useState(false);
   const useList = catalog.rows.length > 0;
-  const bodies = [<QJob key="a" catalog={catalog} />, <QRoles key="r" />, <QTasks key="b" />, <QSkills key="s" />, <QLevel key="c" />, <QApplicability key="d" />,
+  const bodies = [<QJob key="a" catalog={catalog} />, <QRoles key="r" />, <QTasks key="b" />, <QTaskDetail key="b2" />, <QSkills key="s" />, <QLevel key="c" />, <QApplicability key="d" />,
     <QAiEnv key="h" />, <QStory key="i" />];
   const jobOk = useList ? s.profile.jobPath.length === 4 : s.profile.job !== 'other' || !!s.profile.jobOther.trim();
   const c = s.profile.career;
   const positionOk = c.leader === 'no' || (c.leader === 'yes' && LEADER_POSITIONS.includes(c.position));
-  const canNext = sub === 2 ? tasksOk : sub === 0 ? jobOk && positionOk : true;
-  const hint = sub === 2 && !tasksOk
-    ? (tasks.length === 0 ? '업무를 1개 이상 추가해 주세요.' : shareTotal > 100 ? '업무 비율 합계가 100%를 넘지 않게 조정해 주세요.' : '빨간 표시가 있는 업무를 확인해 주세요.')
+  const canNext = sub === SUB.pick ? pickOk : sub === SUB.detail ? tasksOk : sub === 0 ? jobOk && positionOk : true;
+  const hint = sub === SUB.pick && !pickOk
+    ? (tasks.length === 0 ? '업무를 1개 이상 골라 주세요.' : '이름이 비어 있는 업무가 있어요.')
+    : sub === SUB.detail && !tasksOk
+    ? (shareTotal > 100 ? '업무 비율 합계가 100%를 넘지 않게 조정해 주세요.' : '빨간 표시가 있는 업무를 확인해 주세요.')
     : sub === 0 && !jobOk ? (useList ? '직군부터 직무까지 차례로 골라 주세요.' : '직무를 직접 입력해 주세요.')
     : sub === 0 && !positionOk ? (c.leader === 'yes' ? '팀장·실장 중 직책을 골라 주세요.' : '직책자 여부를 골라 주세요. 직책자는 다음 질문에서 리더 역할도 체크합니다.') : undefined;
 
@@ -56,7 +61,7 @@ export default function ProfileStep() {
       <div className="sub-progress" aria-label="질문 진행" ref={subNav}>
         {SUBS.map((x, i) => (
           <button key={x} className={i === sub ? 'now' : i < sub ? 'done' : ''}
-            disabled={i > 2 && !tasksOk} onClick={() => go(i)}>
+            disabled={(i >= SUB.detail && !pickOk) || (i > SUB.detail && !tasksOk)} onClick={() => go(i)}>
             <span className="num">{CODES[i]}</span>{x}
           </button>
         ))}
@@ -311,51 +316,40 @@ function RoleGroup({ title, sub, items, onRate, onRemove, empty }: {
   );
 }
 
+/** QB1 업무 고르기: 표준 업무·역할·예시에서 체크하거나 직접 추가 (개수 제한 없음) */
 function QTasks() {
   const { s, d } = useApp();
   const tasks = s.profile.tasks;
-  const total = tasks.reduce((x, t) => x + (t.share || 0), 0);
-  const over = total > 100 + 1e-9;
-  const rest = Math.max(0, 100 - total);
-  const [open, setOpen] = useState<string | null>(tasks[tasks.length - 1]?.id ?? null);
   const names = new Set(tasks.map((t) => t.name));
   const roleRows = useRoleCatalog();
   const roleList = currentRoles(s.profile, roleRows);
-  /** 체크 목록: 같은 이름의 업무가 있으면 빼고, 없으면 추가 (최대 5개) */
+  const [draft, setDraft] = useState('');
+  /** 체크 목록: 같은 이름의 업무가 있으면 빼고, 없으면 추가 */
   const toggleByName = (name: string, task: Partial<Task>) => {
     const ex = tasks.find((t) => t.name === name);
-    if (ex) { d({ type: 'removeTask', id: ex.id }); return; }
-    if (tasks.length < 5) d({ type: 'addTask', task });
+    if (ex) d({ type: 'removeTask', id: ex.id });
+    else d({ type: 'addTask', task });
   };
   const std = stdTasksFor(s.profile);
   const pickedStd = tasks.filter((t) => t.taskId && std.some((x) => x.id === t.taskId)).length;
   const toggleStd = (x: StdTask) => {
     const ex = tasks.find((t) => t.taskId === x.id);
     if (ex) { d({ type: 'removeTask', id: ex.id }); return; }
-    if (tasks.length >= 5) return;
     d({ type: 'addTask', task: {
       name: x.text, type: x.type, share: 10, taskId: x.id, eLevel: x.eLevel, mckActivity: x.mckActivity,
       onetCode: x.onetCode, matchLevel: x.matchLevel, aeiAutoShare: x.aeiAutoShare,
     } });
   };
+  const name = draft.trim().slice(0, 30);
+  const canAdd = !!name && !names.has(name);
+  const add = () => { if (canAdd) { d({ type: 'addTask', task: { name, share: 10 } }); setDraft(''); } };
 
   return (
     <div className="qcard wide">
-      <QHead code="Q.B" title="나의 실제 업무를 직접 정의해 보세요"
+      <QHead code="Q.B-1" title="내가 하는 업무를 모두 골라 주세요"
         desc={std.length
-          ? '전체 업무를 100%로 볼 때, 비중이 큰 업무부터 최대 5개까지 고르고 비율을 적어주세요. 내 직무의 표준 업무에서 먼저 고르고, 목록에 없는 업무만 직접 입력하세요.'
-          : '전체 업무를 100%로 볼 때, 비중이 큰 업무부터 최대 5개까지 비율을 적어주세요. 예시는 참고용이며 자유롭게 고치거나 지울 수 있습니다.'} />
-
-      <div className={`hours-meter${over ? ' over' : ''}`}>
-        <div className="hm-head">
-          <span>입력한 업무 비율 합계</span>
-          <b className="num">{fmtPct(total)} / 100%</b>
-        </div>
-        <div className="hm-track"><span style={{ width: `${Math.min(100, total)}%` }} /></div>
-        {over
-          ? <p className="warn">⚠ 합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄여 주세요.</p>
-          : <small>비율은 추정치여도 괜찮습니다. 나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다. 시간 환산은 마지막 단계에서 근무시간을 바꿔 가며 해볼 수 있어요.</small>}
-      </div>
+          ? '내 직무의 표준 업무에서 먼저 고르고, 목록에 없는 업무는 아래에서 직접 추가하세요. 개수 제한은 없어요. 비율·빈도·유형은 다음 화면에서 정합니다.'
+          : '역할과 예시 업무에서 고르거나 직접 추가하세요. 개수 제한은 없어요. 비율·빈도·유형은 다음 화면에서 정합니다.'} />
 
       {std.length > 0 && (
         <div className="std-pick">
@@ -368,8 +362,7 @@ function QTasks() {
               const on = tasks.some((t) => t.taskId === x.id);
               return (
                 <li key={x.id}>
-                  <button role="checkbox" aria-checked={on} className={`std-item${on ? ' on' : ''}`}
-                    disabled={!on && tasks.length >= 5} onClick={() => toggleStd(x)}>
+                  <button role="checkbox" aria-checked={on} className={`std-item${on ? ' on' : ''}`} onClick={() => toggleStd(x)}>
                     <span className="box">{on ? '✓' : ''}</span>
                     <span className="std-text">{x.text}<small>{LABELS.type[x.type]}</small></span>
                   </button>
@@ -381,8 +374,7 @@ function QTasks() {
       )}
 
       {roleList.length > 0 && (
-        <PickList title="나의 역할에서 불러오기" note="체크하면 아래 업무 목록에 추가되고, 해제하면 빠져요"
-          full={tasks.length >= 5}
+        <PickList title="나의 역할에서 불러오기" note="체크하면 업무로 추가되고, 해제하면 빠져요"
           items={roleList.map((r) => ({
             key: r.role, label: r.role, on: names.has(r.role.slice(0, 30)),
             meta: [r.group === 'leader' ? '리더 역할' : r.group === 'custom' ? '직접 추가한 역할' : '직무 역할', r.score !== null ? `${r.score}점 · ${ROLE_SCALE[r.score - 1]}` : '점수 없음'].join(' · '),
@@ -391,41 +383,97 @@ function QTasks() {
       )}
 
       {s.profile.job === 'edu' && (
-        <PickList title="교육기획 예시 업무" note="자주 하는 일과 비슷하면 체크한 뒤 이름과 비율을 고쳐 쓰세요"
-          full={tasks.length >= 5}
+        <PickList title="교육기획 예시 업무" note="자주 하는 일과 비슷하면 체크하세요. 이름은 다음 화면에서 고칠 수 있어요"
           items={EDU_EXAMPLES.map((e) => ({ key: e.name, label: e.name, on: names.has(e.name), meta: `${LABELS.type[e.type]} · 예시 비율 ${e.share}%` }))}
           onToggle={(key) => { const e = EDU_EXAMPLES.find((x) => x.name === key); if (e) toggleByName(e.name, e); }} />
       )}
 
-      <div className="task-list">
+      <div className="field">
+        <label htmlFor="task-add">목록에 없는 업무 직접 추가</label>
+        <div className="range-row">
+          <input id="task-add" value={draft} maxLength={30} placeholder="예: 사내 강사 양성 프로그램 운영"
+            onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} />
+          <button className="btn" disabled={!canAdd} onClick={add}>추가</button>
+        </div>
+      </div>
+
+      <div className="picked">
+        <div className="pl-head"><b>고른 업무</b><small><span className="num">{tasks.length}</span>개 · 다음 화면에서 하나씩 구체화해요</small></div>
+        {tasks.length === 0
+          ? <p className="fine">아직 고른 업무가 없어요.</p>
+          : (
+            <ol className="picked-list">
+              {tasks.map((t, i) => (
+                <li key={t.id}>
+                  <span className="num">{i + 1}</span>
+                  <span className="pk-name">{t.name || <em>이름 없음</em>}</span>
+                  <em className={`src-badge ${isStd(t) ? 'res' : 'est'}`}>{eSourceLabel(t)}</em>
+                  <button className="btn tiny ghost" aria-label={`${t.name} 빼기`} onClick={() => d({ type: 'removeTask', id: t.id })}>빼기</button>
+                </li>
+              ))}
+            </ol>
+          )}
+      </div>
+    </div>
+  );
+}
+
+/** QB2 업무 구체화: 고른 업무마다 비율·빈도·유형·어려운 점·활동·스킬·중요도 */
+function QTaskDetail() {
+  const { s, d } = useApp();
+  const tasks = s.profile.tasks;
+  const total = tasks.reduce((x, t) => x + (t.share || 0), 0);
+  const over = total > 100 + 1e-9;
+  const rest = Math.max(0, 100 - total);
+  /** 비율을 지금 비율대로 유지하면서 합계 100%로 맞추기 (0.5% 단위) */
+  const fit = () => {
+    if (!(total > 0)) return;
+    tasks.forEach((t) => d({ type: 'task', id: t.id, patch: { share: Math.max(0.5, Math.round(((t.share || 0) / total) * 200) / 2) } }));
+  };
+  return (
+    <div className="qcard wide">
+      <QHead code="Q.B-2" title="고른 업무를 하나씩 구체화해 주세요"
+        desc="업무마다 전체 업무 중 비율, 빈도, 유형, 어려운 점, 주요 활동, 쓰는 스킬을 골라 주세요. 비율은 추정치여도 괜찮아요." />
+
+      <div className={`hours-meter sticky-meter${over ? ' over' : ''}`}>
+        <div className="hm-head">
+          <span>입력한 업무 비율 합계 · 업무 {tasks.length}개</span>
+          <b className="num">{fmtPct(total)} / 100%</b>
+        </div>
+        <div className="hm-track"><span style={{ width: `${Math.min(100, total)}%` }} /></div>
+        <div className="hm-foot">
+          {over
+            ? <p className="warn">⚠ 합계가 100%보다 {fmtPct(total - 100)} 많습니다. 업무 비율을 줄이거나 자동으로 맞춰 주세요.</p>
+            : <small>나머지 {fmtPct(rest)}는 회의·기타 업무로 봅니다.</small>}
+          {tasks.length > 1 && <button className="btn tiny" onClick={fit}>비율 유지하며 합계 100%로 맞추기</button>}
+        </div>
+      </div>
+
+      {tasks.length === 0 && <p className="fine">고른 업무가 없어요. 이전 화면에서 업무를 골라 주세요.</p>}
+      <div className="detail-list">
         {tasks.map((t, i) => {
           const err = taskError(t);
-          const isOpen = open === t.id;
           return (
-            <article key={t.id} className={`task-card${isOpen ? ' open' : ''}${err ? ' err' : ''}`}>
-              <button className="task-sum" onClick={() => setOpen(isOpen ? null : t.id)} aria-expanded={isOpen}>
+            <article key={t.id} className={`task-card open detail${err ? ' err' : ''}`}>
+              <header className="task-sum static">
                 <span className="tnum num">{i + 1}</span>
                 <span className="tname">{t.name || '새 업무'}</span>
                 <span className="tmeta">{LABELS.type[t.type]} · {fmtPct(t.share || 0)}
                   <em className={`src-badge ${isStd(t) ? 'res' : 'est'}`}>{eSourceLabel(t)}</em></span>
-                <span className="caret">{isOpen ? '▴' : '▾'}</span>
-              </button>
+              </header>
               {err && <p className="err-msg">{err}</p>}
-              {isOpen && <TaskEditor t={t} onRemove={() => d({ type: 'removeTask', id: t.id })} />}
+              <TaskEditor t={t} onRemove={() => d({ type: 'removeTask', id: t.id })} />
             </article>
           );
         })}
       </div>
-      {tasks.length < 5 ? (
-        <button className="btn dashed" onClick={() => { d({ type: 'addTask' }); setOpen(null); }}>{std.length ? '+ 목록에 없는 업무 직접 입력' : '+ 업무 직접 추가'} ({tasks.length}/5)</button>
-      ) : <p className="fine">업무는 최대 5개까지 입력할 수 있습니다.</p>}
     </div>
   );
 }
 
 /** 세로 체크 목록: 한 줄에 항목 하나, 체크 = 업무로 추가 */
-function PickList({ title, note, items, full, onToggle }: {
-  title: string; note?: string; full: boolean;
+function PickList({ title, note, items, onToggle }: {
+  title: string; note?: string;
   items: { key: string; label: string; meta?: string; on: boolean }[]; onToggle: (key: string) => void;
 }) {
   const picked = items.filter((x) => x.on).length;
@@ -433,13 +481,13 @@ function PickList({ title, note, items, full, onToggle }: {
     <div className="pick-list">
       <div className="pl-head">
         <b>{title}</b>
-        <small>{note}{note && ' · '}<span className="num">{picked}/{items.length}</span> 선택{full && ' · 업무 5개가 다 찼어요'}</small>
+        <small>{note}{note && ' · '}<span className="num">{picked}/{items.length}</span> 선택</small>
       </div>
       <ul>
         {items.map((x) => (
           <li key={x.key}>
             <button role="checkbox" aria-checked={x.on} className={`pl-item${x.on ? ' on' : ''}`}
-              disabled={!x.on && full} onClick={() => onToggle(x.key)}>
+              onClick={() => onToggle(x.key)}>
               <span className="box">{x.on ? '✓' : ''}</span>
               <span className="pl-text">{x.label}{x.meta && <small>{x.meta}</small>}</span>
             </button>
