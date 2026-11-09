@@ -872,3 +872,15 @@ ul.dots { margin: 0; padding-left: 18px; display: flex; flex-direction: column; 
   .bm { flex: none; }
 }
 .adj { grid-template-columns: minmax(150px, 1.2fr) 2fr auto 64px; }
+/* 스킬 방향 사분면 */
+.squad.q-delegate { border-left-color: var(--blue); }
+.squad.q-learn { border-left-color: var(--violet); }
+.squad.q-core { border-left-color: var(--good); }
+.squad.q-grow { border-left-color: var(--warn); }
+.ai-ready { border-left: 3px solid var(--good); }
+.ai-ready.low { border-left-color: var(--warn); background: rgba(242, 182, 90, 0.08); }
+.ai-ready p { font-size: 14px; }
+.reinvest-hint { font-size: 13.5px; color: var(--fg-dim); padding: 10px 12px; border-radius: 10px; background: rgba(79, 209, 165, 0.1); }
+.reinvest-hint b { color: var(--fg); margin-right: 6px; }
+.reinvest-hint small { color: var(--fg-faint); }
+.chart-wrap .qbg.ai { fill: rgba(47, 107, 255, 0.05); }

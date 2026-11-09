@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import type { Activity, Profile, Task, TaskType } from './engine/types';
 import { isEduPath } from './jobCatalog';
+import { taskPotential } from './engine/research';
+import { envFactors } from './engine/simulate';
 
 declare global { interface Window { SKILL_LIST?: string } }
 
@@ -206,19 +208,23 @@ export const levelDesc = (s: SkillDef, lv: number) => s.levels[lv - 1] || SKILL_
 // ─────────────────────────────────────────────
 // 계산
 // ─────────────────────────────────────────────
-export type Quadrant = 'core' | 'boost' | 'expand' | 'adjust';
-export const QUADRANT_INFO: Record<Quadrant, { title: string; desc: string; tone: string }> = {
-  core: { title: '핵심 강점 업무', desc: '시간을 많이 쓰고 스킬도 능숙해요. 노하우를 표준화해 나누면 팀 전체의 힘이 됩니다.', tone: 'good' },
-  boost: { title: '스킬 보강 필요', desc: '시간을 많이 쓰지만 스킬 수준이 아직 낮아요. 학습이나 AI 보조를 가장 먼저 검토할 업무입니다.', tone: 'bad' },
-  expand: { title: '역량 확장 여지', desc: '잘하는 일인데 쓰는 시간이 적어요. 역할을 넓히거나 다른 사람을 도울 수 있는 영역입니다.', tone: 'blue' },
-  adjust: { title: '효율화·조정 검토', desc: '비중도 스킬 수준도 낮아요. 위임·자동화·업무 조정을 검토해 볼 만합니다.', tone: 'warn' },
+/** 스킬 방향 4분면: 가로 = 업무의 AI 적용 가능성, 세로 = 그 업무에 쓰는 스킬의 내 수준 */
+export type Quadrant = 'delegate' | 'learn' | 'core' | 'grow';
+export const QUADRANT_INFO: Record<Quadrant, { title: string; desc: string; dir: string }> = {
+  delegate: { title: 'AI에 맡기고 검증하는 업무', desc: 'AI가 잘할 수 있고 나도 잘 아는 일이에요. 직접 하던 부분을 AI에 맡기고, 나는 결과를 설계·검증하는 역할로 옮겨 갈 수 있어요.', dir: '맡기기' },
+  learn: { title: 'AI로 배우며 하는 업무', desc: 'AI가 잘할 수 있지만 내 스킬은 아직 낮은 일이에요. AI를 코치처럼 쓰되, 결과를 판단할 기본 스킬은 꼭 함께 키워야 AI에 끌려가지 않아요.', dir: '함께 배우기' },
+  core: { title: '사람 고유의 강점 업무', desc: 'AI가 대신하기 어렵고 내가 잘하는 일이에요. AI로 아낀 시간을 이쪽에 재투자하면 내 일의 가치가 커져요.', dir: '시간 재투자' },
+  grow: { title: '사람이 직접 키워야 할 업무', desc: 'AI가 대신하기 어렵고 내 스킬도 아직 낮은 일이에요. 교육·코칭으로 우선 육성할 영역이에요.', dir: '육성 우선' },
 };
+/** AI 적용 가능성 기준선 (초기 가정 40% · 사내 데이터가 쌓이면 중앙값으로 교체) */
+export const AI_MID = 0.4;
 export const Y_MID = 3; // 스킬 매치 기준선: 독립수행
 
 export interface TaskMatch {
   id: string; name: string; share: number; hours: number; activity: Activity;
   skills: { name: string; score: number | null }[];
   score: number | null;   // 연결 스킬 본인 평가 평균 (1~5)
+  ai: number;             // 이 업무의 AI 적용 가능성 (0~1, 시뮬레이션 잠재력과 같은 값)
   quadrant: Quadrant | null;
 }
 
@@ -229,6 +235,8 @@ export interface WorkMap {
   skillAvg: number | null;
   skills: { def: SkillDef; score: number | null; linked: string[] }[];
   xMid: number;                               // 비중 기준선 (업무 평균 비중 %)
+  aiAvg: number;                              // 시간 비중 가중 평균 AI 적용 가능성 (0~1)
+  aiTool: { name: string; score: number | null } | null; // AI 도구 활용 스킬 (실제로 맡길 수 있는지 판단)
   me: { x: number; y: number } | null;
   primary: Activity | null;
   secondary: Activity | null;
@@ -243,13 +251,16 @@ export function computeWorkMap(p: Profile, catalog: SkillDef[]): WorkMap {
   const totalShare = tasks0.reduce((x, t) => x + t.share, 0);
   const xMid = tasks0.length ? totalShare / tasks0.length : 20;
 
+  const boost = envFactors(p.env).repetitiveBoost;
   const tasks: TaskMatch[] = tasks0.map((t) => {
     const skills = (t.skills ?? []).map((name) => ({ name, score: typeof r[name] === 'number' ? r[name] : null }));
     const score = avg(skills.map((x) => x.score).filter((x): x is number => x !== null));
+    const ai = taskPotential(t, boost);
     const quadrant: Quadrant | null = score === null ? null
-      : t.share >= xMid ? (score >= Y_MID ? 'core' : 'boost') : (score >= Y_MID ? 'expand' : 'adjust');
-    return { id: t.id, name: t.name, share: t.share, hours: t.hours, activity: activityOf(t), skills, score, quadrant };
+      : ai >= AI_MID ? (score >= Y_MID ? 'delegate' : 'learn') : (score >= Y_MID ? 'core' : 'grow');
+    return { id: t.id, name: t.name, share: t.share, hours: t.hours, activity: activityOf(t), skills, score, ai, quadrant };
   }).sort((a, b) => b.share - a.share);
+  const aiAvg = totalShare ? tasks.reduce((x, t) => x + t.ai * t.share, 0) / totalShare : 0;
 
   const act = new Map<Activity, number>();
   tasks.forEach((t) => act.set(t.activity, (act.get(t.activity) ?? 0) + t.share));
@@ -267,8 +278,10 @@ export function computeWorkMap(p: Profile, catalog: SkillDef[]): WorkMap {
   }));
   const skillAvg = avg(skills.map((x) => x.score).filter((x): x is number => x !== null));
 
+  const aiDef = skills.find((x) => x.def.name.includes('AI'));
   return {
-    totalShare, tasks, activities, skillAvg, skills, xMid, me,
+    totalShare, tasks, activities, skillAvg, skills, xMid, me, aiAvg,
+    aiTool: aiDef ? { name: aiDef.def.name, score: aiDef.score } : null,
     primary: activities[0]?.key ?? null,
     secondary: activities[1] && activities[1].share >= 0.2 ? activities[1].key : null,
   };
@@ -280,45 +293,46 @@ export interface Insight { tag: string; title: string; body: string }
 export function buildInsights(m: WorkMap, firstExperiment: { name: string; reason: string } | null): Insight[] {
   const out: Insight[] = [];
   const by = (q: Quadrant) => m.tasks.filter((t) => t.quadrant === q);
+  const names = (xs: TaskMatch[]) => xs.slice(0, 2).map((t) => `'${t.name}'`).join(', ');
   const lowest = (t: TaskMatch) => [...t.skills].filter((x) => x.score !== null).sort((a, b) => (a.score ?? 0) - (b.score ?? 0))[0];
 
-  const boost = by('boost')[0];
-  if (boost) {
-    const lw = lowest(boost);
-    out.push({ tag: '스킬 보강', title: `'${boost.name}' 스킬부터 한 단계 올리기`,
-      body: `업무의 ${fmt(boost.share)}를 쓰는 일인데 연결 스킬 수준이 평균 ${boost.score!.toFixed(1)}점이에요.${lw ? ` 특히 '${lw.name}'(${SKILL_LEVELS[(lw.score ?? 1) - 1].name})을 다음 단계로 올릴 학습 계획—사내 교육, 선배 코칭, AI 보조 실습—을 하나 정해 보세요.` : ''}` });
+  // 1) 실제로 AI에 맡길 수 있는지: AI 도구 활용 스킬이 낮은데 AI 적용 가능 업무가 많으면 가장 먼저
+  const aiHigh = m.tasks.filter((t) => t.ai >= AI_MID);
+  if (m.aiTool && m.aiTool.score !== null && m.aiTool.score <= 2 && aiHigh.length) {
+    out.push({ tag: 'AI 준비도', title: `'${m.aiTool.name}'부터 한 단계 올리기`,
+      body: `AI 적용 가능성이 높은 업무가 ${aiHigh.length}개인데 '${m.aiTool.name}'이 ${SKILL_LEVELS[m.aiTool.score - 1].name} 단계라, 지금은 맡길 수 있어도 실제로 맡기기 어려워요. 다음 단계는 "${levelDesc(m.skills.find((x) => x.def.name === m.aiTool!.name)!.def, m.aiTool.score + 1)}"입니다.` });
   }
-  if (firstExperiment) {
+  const del = by('delegate');
+  if (del.length) {
+    out.push({ tag: '맡기기', title: `${names(del)}은 AI에 맡기고 검증하기`,
+      body: '내가 잘 아는 일이라 AI 결과의 틀린 부분을 잡아낼 수 있어요. 초안·정리는 AI에 맡기고, 나는 기준을 정하고 결과를 확인하는 데 시간을 쓰세요. 내 방식을 지시문·체크리스트로 남겨 두면 팀도 함께 쓸 수 있어요.' });
+  } else if (firstExperiment) {
     out.push({ tag: 'AI 실험', title: `AI로 먼저 실험해 볼 업무: ${firstExperiment.name}`, body: firstExperiment.reason });
   }
-  const core = by('core')[0];
-  if (core) {
-    out.push({ tag: '강점 확산', title: `'${core.name}' 노하우를 템플릿으로 남기기`,
-      body: '시간도 많이 쓰고 스킬도 능숙한 핵심 업무예요. 내 방식을 체크리스트·지시문·예시로 정리해 두면 AI 활용과 동료 공유가 함께 쉬워집니다.' });
+  const learn = by('learn');
+  if (learn.length) {
+    const lw = lowest(learn[0]);
+    out.push({ tag: '함께 배우기', title: `${names(learn)}은 AI를 코치처럼 쓰며 스킬 키우기`,
+      body: `AI가 잘할 수 있는 일이지만 내 스킬이 아직 낮아서, 결과를 그대로 쓰면 틀린 부분을 놓칠 수 있어요. AI에게 "왜 이렇게 했는지" 설명을 받으며 배우고${lw ? `, 특히 '${lw.name}'(${SKILL_LEVELS[(lw.score ?? 1) - 1].name})을 다음 단계로 올려 보세요` : ''}.` });
   }
-  const expand = by('expand')[0];
-  if (expand) {
-    out.push({ tag: '역할 확장', title: `'${expand.name}' 비중을 넓힐 기회 찾기`,
-      body: '잘하는 일인데 지금은 시간을 적게 쓰고 있어요. 팀장과 역할 확대나 다른 업무와의 조정을 이야기해 볼 만합니다.' });
+  const core = by('core');
+  if (core.length) {
+    out.push({ tag: '시간 재투자', title: `AI로 아낀 시간은 ${names(core)}에 쓰기`,
+      body: 'AI가 대신하기 어렵고 내가 잘하는 일이에요. 맡긴 업무에서 생긴 시간을 이쪽에 쓰면 내 일의 가치가 가장 크게 올라가요.' });
   }
-  const adjust = by('adjust')[0];
-  if (adjust && out.length < 5) {
-    out.push({ tag: '업무 조정', title: `'${adjust.name}'은 위임·자동화 검토`,
-      body: '비중도 스킬 수준도 낮은 업무예요. 꼭 내가 해야 하는 일인지, 자동화하거나 다른 방식으로 처리할 수 있는지 점검해 보세요.' });
+  const grow = by('grow');
+  if (grow.length && out.length < 5) {
+    const lw = lowest(grow[0]);
+    out.push({ tag: '육성 우선', title: `${names(grow)}은 교육·코칭으로 직접 키우기`,
+      body: `AI로 대신하기 어려운 일이라 결국 사람이 잘해야 해요.${lw ? ` '${lw.name}'을 ${SKILL_LEVELS[Math.min(4, lw.score ?? 1)].name} 단계로 올리는 학습 계획을 하나 정해 보세요.` : ''}` });
   }
-  const ai = m.skills.find((x) => x.def.name.includes('AI'));
-  if (ai && ai.score !== null && ai.score <= 2 && out.length < 5) {
-    out.push({ tag: 'AI 역량', title: `'${ai.def.name}' 다음 단계(${SKILL_LEVELS[ai.score].name}) 도전`,
-      body: `다음 단계는 "${levelDesc(ai.def, ai.score + 1)}"입니다. 한 업무에서 같은 방식으로 3번 반복해 보는 것부터 시작해 보세요.` });
-  }
-  if (m.primary && out.length < 5) {
-    const A = ACTIVITY[m.primary];
-    out.push({ tag: '일하는 방식', title: `${A.pattern}의 주의 영역 살피기`, body: A.cautions[0] });
+  if (firstExperiment && del.length && out.length < 5) {
+    out.push({ tag: 'AI 실험', title: `AI로 먼저 실험해 볼 업무: ${firstExperiment.name}`, body: firstExperiment.reason });
   }
   const unlinked = m.tasks.filter((t) => t.score === null).length;
   if (unlinked && out.length < 5) {
     out.push({ tag: '진단 보완', title: `스킬이 연결되지 않은 업무 ${unlinked}개`,
-      body: '업무 구체화(Q.B-2)에서 업무마다 쓰는 스킬을 연결하고 스킬 수준(Q.S)을 고르면 스킬 활용분석이 더 정확해집니다.' });
+      body: '업무 구체화(Q.B-2)에서 업무마다 쓰는 스킬을 연결하고 스킬 수준(Q.S)을 고르면 스킬 방향 분석에 들어가요.' });
   }
   return out.slice(0, 5);
 }

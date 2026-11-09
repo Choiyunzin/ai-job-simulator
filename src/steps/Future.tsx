@@ -14,6 +14,7 @@ import { buildReport, toCSV, toText } from '../report';
 import { useApp } from '../state';
 import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
+import { QUADRANT_INFO as SKILL_Q, computeWorkMap, useSkillCatalog } from '../workmap';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
 const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
@@ -26,6 +27,9 @@ export default function Future() {
   const roles = roleSummary(currentRoles(s.profile, roleRows));
   const rs = researchDiagnosis(s.profile, 'beta');
   const { after, redesign, dx, contrib, bands } = res;
+  const skillCatalog = useSkillCatalog();
+  const wm = useMemo(() => computeWorkMap(s.profile, skillCatalog), [s.profile, skillCatalog]);
+  const reinvestTargets = [...wm.tasks.filter((t) => t.quadrant === 'core'), ...wm.tasks.filter((t) => t.quadrant === 'grow')];
   const T = redesign.totals;
   const free = Math.max(0, T.freeTime);
   const items = REINVEST[s.profile.job === 'edu' ? 'edu' : 'general'];
@@ -104,6 +108,14 @@ export default function Future() {
           <h3>확보한 시간 재투자하기</h3>
           <span className={`pill ${overAlloc ? 'bad' : 'good'}`}><span className="num">{allocated.toFixed(1)} / {free.toFixed(1)}</span>시간</span>
         </div>
+        {reinvestTargets.length > 0 && (
+          <p className="reinvest-hint">
+            <b>스킬 방향 분석 기준 추천</b> 아낀 시간은 AI가 대신하기 어려운 업무에 쓰면 효과가 커요:{' '}
+            {reinvestTargets.slice(0, 4).map((t, i) => (
+              <span key={t.id}>{i > 0 && ', '}'{t.name}'<small> ({SKILL_Q[t.quadrant!].title})</small></span>
+            ))}
+          </p>
+        )}
         {overAlloc && <p className="warn">⚠ 확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더나 숫자를 줄여 주세요.</p>}
         <div className="invest">
           {items.map((it, i) => {

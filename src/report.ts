@@ -25,7 +25,7 @@ const workMapOf = (s: AppState, firstExp: { name: string; reason: string } | nul
     skills: m.skills.map((x) => ({ skill: x.def.name, score: x.score, level: x.score ? SKILL_LEVELS[x.score - 1].name : null, tasks: x.linked })),
     taskMatches: m.tasks.map((t) => ({
       name: t.name, sharePct: t.share, activity: ACTIVITY[t.activity].label, skills: t.skills.map((x) => x.name),
-      matchScore: t.score === null ? null : r2(t.score), quadrant: t.quadrant ? SKILL_QUADRANT[t.quadrant].title : null,
+      aiPotentialPct: Math.round(t.ai * 100), matchScore: t.score === null ? null : r2(t.score), quadrant: t.quadrant ? SKILL_QUADRANT[t.quadrant].title : null,
     })),
     insights: buildInsights(m, firstExp).map((x) => `${x.title} — ${x.body}`),
   };
@@ -143,7 +143,7 @@ export function toCSV(r: Report): string {
   r.workMap.activities.forEach((a) => lines.push(`업무패턴,${esc(a.activity)}(%),${a.sharePct}`));
   lines.push(`스킬,스킬 수준 평균,${r.workMap.skillAvg ?? ''}`);
   r.workMap.skills.forEach((x) => lines.push(`스킬,${esc(x.skill)},${x.score ?? ''}`));
-  r.workMap.taskMatches.forEach((t) => lines.push(`스킬 활용,${esc(t.name)},${esc(`${t.matchScore ?? ''} (${t.quadrant ?? '스킬 미연결'})`)}`));
+  r.workMap.taskMatches.forEach((t) => lines.push(`스킬 방향,${esc(t.name)},${esc(`AI ${t.aiPotentialPct}% · 스킬 ${t.matchScore ?? '-'} → ${t.quadrant ?? '스킬 미연결'}`)}`));
   lines.push(`요약,AI 업무 유형,${esc(r.archetype)}`);
   r.roles.forEach((x) => lines.push(`역할 진단(${esc(x.group)}),${esc(x.role)},${x.score ?? ''}`));
   const rs = r.research;
@@ -185,7 +185,7 @@ export function toText(r: Report): string {
     `■ 나의 AI 업무혁신 리포트 (${r.job}${r.career.label ? ` · ${r.career.label}` : ''})`,
     ...(r.dept || r.teamSize ? [`소속: ${[r.dept, r.teamSize && `팀 ${r.teamSize}`].filter(Boolean).join(' · ')}`] : []),
     `업무패턴: ${r.workMap.pattern ?? '—'}${r.workMap.secondPattern ? ` (다음: ${r.workMap.secondPattern})` : ''} · 스킬 수준 평균 ${r.workMap.skillAvg ?? '—'} / 5`,
-    ...r.workMap.taskMatches.filter((t) => t.quadrant).map((t) => `  - ${t.name}: 비중 ${t.sharePct}%, 매치 ${t.matchScore} → ${t.quadrant}`),
+    ...r.workMap.taskMatches.filter((t) => t.quadrant).map((t) => `  - ${t.name}: 비중 ${t.sharePct}%, AI 적용 가능성 ${t.aiPotentialPct}%, 스킬 ${t.matchScore} → ${t.quadrant}`),
     ...(r.workMap.insights.length ? ['실행 인사이트:', ...r.workMap.insights.map((x, i) => `  ${i + 1}. ${x}`)] : []),
     `AI 업무 유형: ${r.archetype}`,
     r.summary,

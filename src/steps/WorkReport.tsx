@@ -8,7 +8,7 @@ import { useApp } from '../state';
 import { useResults } from '../useResults';
 import type { Activity } from '../engine/types';
 import {
-  ACTIVITY, ACTIVITY_KEYS, QUADRANT_INFO, SKILL_LEVELS, Y_MID, buildInsights, computeWorkMap, levelDesc, useSkillCatalog,
+  ACTIVITY, ACTIVITY_KEYS, AI_MID, QUADRANT_INFO, SKILL_LEVELS, Y_MID, buildInsights, computeWorkMap, levelDesc, useSkillCatalog,
   type Quadrant, type TaskMatch, type WorkMap,
 } from '../workmap';
 import { LAST_SUB } from './ProfileStep';
@@ -17,7 +17,7 @@ export const MODULES = [
   { key: 'status', no: '01', title: '직무현황', sub: '직무가 어떻게 이루어져 있나' },
   { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크와 스킬로 일하고 있나' },
   { key: 'ai', no: '03', title: 'AI 영향분석', sub: '지금 하는 일이 AI의 영향을 어떻게 받을까' },
-  { key: 'use', no: '04', title: '스킬 활용분석', sub: '스킬 & 타임으로 보는 스킬 활용도' },
+  { key: 'use', no: '04', title: '스킬 활용분석', sub: 'AI 적용 가능성 × 스킬 수준으로 보는 스킬 방향' },
   { key: 'pattern', no: '05', title: '업무패턴', sub: '8가지 업무 유형으로 보는 일하는 방식' },
   { key: 'next', no: '06', title: '실행 인사이트', sub: '진단 결과로 시작해 볼 다음 행동' },
 ] as const;
@@ -242,29 +242,43 @@ function SkillUseModule({ m }: { m: WorkMap }) {
   const { s } = useApp();
   const plotted = m.tasks.filter((t) => t.score !== null);
   const missing = m.tasks.filter((t) => t.score === null);
+  const aiHigh = m.tasks.filter((t) => t.ai >= AI_MID).length;
+  const ready = m.aiTool && m.aiTool.score !== null ? m.aiTool.score : null;
   return (
     <>
       <div className="card soft">
-        <h3>내 일에 스킬을 어떻게 활용하고 있는가?</h3>
-        <p>내 업무의 태스크 비중과 스킬 수준을 매칭해, <b>내가 비중 있게 일하는 부분에서 스킬 수준이 어느 정도인지</b> 알아봅니다. 이 분석으로 스킬 보강이나 과업 조정이 필요한지 생각해 볼 수 있습니다.</p>
+        <h3>AI와 함께 일할 때, 어떤 스킬을 넘기고 어떤 스킬을 키울까?</h3>
+        <p>업무마다 <b>AI가 얼마나 할 수 있는지</b>와 <b>그 업무에 쓰는 내 스킬 수준</b>을 함께 놓고 봅니다. AI에 맡길 업무, AI를 코치 삼아 배울 업무, 아낀 시간을 재투자할 업무, 직접 키워야 할 업무가 나뉘어요.</p>
         <ul className="axis-notes">
-          <li><b>가로축(X)</b> 응답한 태스크별 비중 — 어떤 일에 시간을 얼마나 쓰는지</li>
-          <li><b>세로축(Y)</b> 태스크에 연결된 스킬의 본인 평가 평균 — 해당 태스크의 스킬 수준</li>
-          <li><b>매치 점수</b> 본인이 그 태스크를 하면서 스킬을 얼마나 능숙하게 활용하고 있는지 (1~5)</li>
-          <li><b>원 크기</b> 시간 비중 · 점에 마우스를 올리면 태스크 이름, 시간, 매치 점수가 보여요</li>
+          <li><b>가로축(X)</b> 업무의 AI 적용 가능성 — AI 영향분석·시뮬레이션과 같은 값 (업무 유형 × 적용 가능성, 표준 업무는 연구 기준)</li>
+          <li><b>세로축(Y)</b> 그 업무에 연결한 스킬의 내 수준 평균 (1 개념인지 ~ 5 전문가)</li>
+          <li><b>원 크기</b> 시간 비중 · 점에 마우스를 올리면 업무 이름, 시간, AI 적용 가능성, 스킬 수준이 보여요</li>
         </ul>
       </div>
-      {plotted.length ? <SkillMatchChart tasks={plotted} xMid={m.xMid} weekly={s.profile.weeklyHours} /> : (
+      {m.aiTool && (
+        <div className={`card ai-ready${ready !== null && ready <= 2 && aiHigh ? ' low' : ''}`}>
+          <h3>AI 준비도 · {m.aiTool.name} <small>{ready === null ? '미선택' : `${ready}단계 ${SKILL_LEVELS[ready - 1].name}`}</small></h3>
+          <p>{ready === null
+            ? `AI에 맡길 수 있는 업무를 실제로 맡길 수 있는지는 '${m.aiTool.name}' 수준에 달려 있어요. 스킬 수준(Q.S)에서 골라 주세요.`
+            : ready <= 2 && aiHigh
+              ? `AI 적용 가능성이 높은 업무가 ${aiHigh}개 있지만, '${m.aiTool.name}'이 ${SKILL_LEVELS[ready - 1].name} 단계라 지금은 실제로 맡기기 어려워요. 이 스킬을 먼저 올리는 게 가장 빠른 길이에요.`
+              : aiHigh
+                ? `AI 적용 가능성이 높은 업무 ${aiHigh}개를 실제로 AI에 맡길 수 있는 수준이에요. 아래 'AI에 맡기고 검증하는 업무'부터 시작해 보세요.`
+                : `AI 적용 가능성이 높은 업무가 많지 않아요. AI는 보조 도구로 쓰고, 사람 고유의 강점 업무에 집중하는 편이 효과적이에요.`}</p>
+          <small>업무 시간 기준 평균 AI 적용 가능성 {Math.round(m.aiAvg * 100)}%</small>
+        </div>
+      )}
+      {plotted.length ? <SkillMatchChart tasks={plotted} weekly={s.profile.weeklyHours} /> : (
         <div className="card"><p className="fine">스킬이 연결되고 수준이 선택된 업무가 아직 없어요. 업무 구체화(Q.B-2)에서 업무마다 스킬을 연결하고, 스킬 수준(Q.S)을 골라 주세요.</p></div>
       )}
       <div className="quad-grid">
-        {(['boost', 'core', 'adjust', 'expand'] as Quadrant[]).map((q) => {
+        {(['delegate', 'learn', 'core', 'grow'] as Quadrant[]).map((q) => {
           const list = plotted.filter((t) => t.quadrant === q);
           return (
             <div key={q} className={`card squad q-${q}${list.length ? '' : ' empty'}`}>
-              <h3>{QUADRANT_INFO[q].title} <small className="num">{list.length}개</small></h3>
+              <h3>{QUADRANT_INFO[q].title} <small className="num">{list.length}개 · {QUADRANT_INFO[q].dir}</small></h3>
               <p>{QUADRANT_INFO[q].desc}</p>
-              {list.length > 0 && <ul>{list.map((t) => <li key={t.id}>{t.name} <span className="num">{pct(t.share)} · {t.score!.toFixed(1)}점</span></li>)}</ul>}
+              {list.length > 0 && <ul>{list.map((t) => <li key={t.id}>{t.name} <span className="num">AI {Math.round(t.ai * 100)}% · 스킬 {t.score!.toFixed(1)} · 비중 {pct(t.share)}</span></li>)}</ul>}
             </div>
           );
         })}
@@ -274,12 +288,12 @@ function SkillUseModule({ m }: { m: WorkMap }) {
   );
 }
 
-function SkillMatchChart({ tasks, xMid, weekly }: { tasks: TaskMatch[]; xMid: number; weekly: number }) {
+function SkillMatchChart({ tasks, weekly }: { tasks: TaskMatch[]; weekly: number }) {
   const W = 600, H = 360, L = 52, R = 18, T = 18, B = 46;
-  const maxShare = Math.max(...tasks.map((t) => t.share), xMid);
-  const xMax = Math.min(100, Math.max(40, Math.ceil((maxShare + 8) / 10) * 10));
+  const xMax = 100, xMid = AI_MID * 100;
   const X = (v: number) => L + (v / xMax) * (W - L - R);
   const Y = (v: number) => T + ((5 - v) / 4) * (H - T - B);
+  const xv = (t: TaskMatch) => t.ai * 100;
   const rad = (share: number) => 7 + Math.sqrt(share) * 2.2;
   const [hover, setHover] = useState<string | null>(null);
   const hv = tasks.find((t) => t.id === hover);
@@ -290,7 +304,7 @@ function SkillMatchChart({ tasks, xMid, weekly }: { tasks: TaskMatch[]; xMid: nu
     [...tasks].sort((a, b) => b.share - a.share).forEach((t) => {
       const text = t.name.length > 12 ? `${t.name.slice(0, 11)}…` : t.name;
       const w = text.length * 11.5;
-      const cx = Math.min(W - R - w / 2, Math.max(L + w / 2, X(t.share)));
+      const cx = Math.min(W - R - w / 2, Math.max(L + w / 2, X(xv(t))));
       const cy = Y(t.score!), r = rad(t.share);
       const tries = [cy - r - 6, cy + r + 15, cy - r - 22, cy + r + 31, cy - r - 38];
       const y = tries.find((ty) => !hit(cx, ty, w)) ?? tries[0];
@@ -298,13 +312,12 @@ function SkillMatchChart({ tasks, xMid, weekly }: { tasks: TaskMatch[]; xMid: nu
     });
     return placed;
   }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
-  const xTicks = Array.from({ length: xMax / 10 + 1 }, (_, i) => i * 10).filter((v) => xMax <= 50 || v % 20 === 0);
+  const xTicks = [0, 20, 40, 60, 80, 100];
   return (
     <div className="card chart-card">
       <div className="chart-wrap">
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, maxWidth: "100%" }} role="img" aria-label="태스크 비중과 스킬 매치 점수 사분면">
-          <rect x={X(xMid)} y={T} width={X(xMax) - X(xMid)} height={Y(Y_MID) - T} className="qbg core" />
-          <rect x={X(xMid)} y={Y(Y_MID)} width={X(xMax) - X(xMid)} height={Y(1) - Y(Y_MID)} className="qbg boost" />
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, maxWidth: "100%" }} role="img" aria-label="업무별 AI 적용 가능성과 스킬 수준 사분면">
+          <rect x={X(xMid)} y={T} width={X(xMax) - X(xMid)} height={Y(1) - T} className="qbg ai" />
           {[1, 2, 3, 4, 5].map((v) => (
             <g key={v}>
               <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} className="grid" />
@@ -314,31 +327,32 @@ function SkillMatchChart({ tasks, xMid, weekly }: { tasks: TaskMatch[]; xMid: nu
           {xTicks.map((v) => <text key={v} x={X(v)} y={H - B + 18} textAnchor="middle" className="tick">{v}%</text>)}
           <line x1={X(xMid)} x2={X(xMid)} y1={T} y2={Y(1)} className="mid" />
           <line x1={L} x2={W - R} y1={Y(Y_MID)} y2={Y(Y_MID)} className="mid" />
-          <text x={W - R - 6} y={T + 14} textAnchor="end" className="qlabel">핵심 강점</text>
-          <text x={W - R - 6} y={Y(1) - 8} textAnchor="end" className="qlabel">스킬 보강 필요</text>
-          <text x={L + 6} y={T + 14} className="qlabel">역량 확장 여지</text>
-          <text x={L + 6} y={Y(1) - 8} className="qlabel">효율화·조정</text>
-          <text x={(L + W - R) / 2} y={H - 6} textAnchor="middle" className="axis">태스크별 시간 비중 →</text>
-          <text transform={`translate(14 ${(T + Y(1)) / 2}) rotate(-90)`} textAnchor="middle" className="axis">스킬 매치 점수 →</text>
+          <text x={W - R - 6} y={T + 14} textAnchor="end" className="qlabel">AI에 맡기고 검증</text>
+          <text x={W - R - 6} y={Y(1) - 8} textAnchor="end" className="qlabel">AI로 배우며</text>
+          <text x={L + 6} y={T + 14} className="qlabel">사람 고유 강점</text>
+          <text x={L + 6} y={Y(1) - 8} className="qlabel">직접 키울 업무</text>
+          <text x={(L + W - R) / 2} y={H - 6} textAnchor="middle" className="axis">업무의 AI 적용 가능성 →</text>
+          <text transform={`translate(14 ${(T + Y(1)) / 2}) rotate(-90)`} textAnchor="middle" className="axis">내 스킬 수준 →</text>
           {tasks.map((t) => (
             <g key={t.id} className={`bub${hover === t.id ? ' on' : ''}`} tabIndex={0} role="button"
-              aria-label={`${t.name}: 비중 ${pct(t.share)}, 매치 ${t.score!.toFixed(1)}점`}
+              aria-label={`${t.name}: AI 적용 가능성 ${Math.round(t.ai * 100)}%, 스킬 ${t.score!.toFixed(1)}, 비중 ${pct(t.share)}`}
               onMouseEnter={() => setHover(t.id)} onMouseLeave={() => setHover(null)} onFocus={() => setHover(t.id)} onBlur={() => setHover(null)}>
-              <circle cx={X(t.share)} cy={Y(t.score!)} r={rad(t.share) + 6} className="hit" />
-              <circle cx={X(t.share)} cy={Y(t.score!)} r={rad(t.share)} className="dot" />
+              <circle cx={X(xv(t))} cy={Y(t.score!)} r={rad(t.share) + 6} className="hit" />
+              <circle cx={X(xv(t))} cy={Y(t.score!)} r={rad(t.share)} className="dot" />
             </g>
           ))}
           {labels.map((l) => <text key={l.id} x={l.x} y={l.y} textAnchor="middle" className="blabel">{l.text}</text>)}
         </svg>
         {hv && (
-          <div className="tip" style={{ left: `${(X(hv.share) / W) * 100}%`, top: `${(Y(hv.score!) / H) * 100}%` }}>
+          <div className="tip" style={{ left: `${(X(xv(hv)) / W) * 100}%`, top: `${(Y(hv.score!) / H) * 100}%` }}>
             <b>{hv.name}</b>
             <span>시간 <b className="num">주 {h1(hv.hours)}</b> ({pct(hv.share)})</span>
-            <span>매치 점수 <b className="num">{hv.score!.toFixed(1)}</b> / 5 · {lvName(hv.score)}</span>
+            <span>AI 적용 가능성 <b className="num">{Math.round(hv.ai * 100)}%</b></span>
+            <span>스킬 수준 <b className="num">{hv.score!.toFixed(1)}</b> / 5 · {lvName(hv.score)}</span>
           </div>
         )}
       </div>
-      <small>세로 점선: 업무 평균 비중({pct(xMid)}) · 가로 점선: 독립수행(3점) · 시간은 주 {weekly}시간 근무 기준 환산</small>
+      <small>세로 점선: AI 적용 가능성 {xMid}%(초기 가정) · 가로 점선: 독립수행(3점) · 원 크기: 시간 비중(주 {weekly}시간 근무 기준)</small>
     </div>
   );
 }
