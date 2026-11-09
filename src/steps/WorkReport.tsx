@@ -14,12 +14,12 @@ import {
 import { LAST_SUB, REFLECT } from './ProfileStep';
 
 export const MODULES = [
-  { key: 'status', no: '01', title: '직무현황', sub: '내 일은 어떻게 구성되어 있나요' },
-  { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크를 어떤 스킬로 하고 있나요' },
-  { key: 'ai', no: '03', title: 'AI 영향분석', sub: '지금 하는 일은 AI의 영향을 어떻게 받을까요' },
-  { key: 'use', no: '04', title: '스킬 활용분석', sub: '시간을 많이 쓰는 일에서 스킬은 어느 수준인가요' },
-  { key: 'pattern', no: '05', title: '업무패턴', sub: '나는 어떤 방식으로 일하고 있나요' },
-  { key: 'next', no: '06', title: '실행 인사이트', sub: '무엇부터 시작해 볼까요' },
+  { key: 'status', no: '01', title: '직무현황', sub: '직무가 어떻게 이루어져 있나' },
+  { key: 'skill', no: '02', title: '태스크 & 스킬', sub: '어떤 태스크와 스킬로 일하고 있나' },
+  { key: 'ai', no: '03', title: 'AI 영향분석', sub: '지금 하는 일이 AI의 영향을 어떻게 받을까' },
+  { key: 'use', no: '04', title: '스킬 활용분석', sub: '스킬 & 타임으로 보는 스킬 활용도' },
+  { key: 'pattern', no: '05', title: '업무패턴', sub: '8가지 업무 유형으로 보는 일하는 방식' },
+  { key: 'next', no: '06', title: '실행 인사이트', sub: '진단 결과로 시작해 볼 다음 행동' },
 ] as const;
 
 /** 리포트 첫 줄: 입력한 데이터로 만든 한 문장 요약 */
@@ -49,28 +49,30 @@ export default function WorkReport() {
 
   return (
     <section className="wr">
+      <p className="eyebrow">STEP 3 · 나의 Work Mapping 진단 리포트</p>
       <div className="wr-head card">
         <div>
           <small>{[jobLabel(p), meta].filter(Boolean).join(' · ')}</small>
           <h1>{headline(m)}</h1>
           {p.reflect !== null && p.reflect <= 2 && (
-            <p className="warn">응답 반영도 '{REFLECT[p.reflect - 1]}'. 결과는 참고용입니다.</p>
+            <p className="warn">응답이 내 업무를 '{REFLECT[p.reflect - 1]}'이라고 답했어요. 결과는 참고용으로 읽고, 필요하면 응답을 고쳐 보세요.</p>
           )}
         </div>
-        <button className="btn" onClick={() => setGuide(true)}>해석법</button>
+        <button className="btn ghost" onClick={() => setGuide(true)}>해석법 보기</button>
       </div>
 
       <div ref={top} className="mod-nav" role="tablist" aria-label="진단 모듈">
         {MODULES.map((x, i) => (
           <button key={x.key} role="tab" aria-selected={mod === i} className={mod === i ? 'on' : ''} onClick={() => goMod(i)}>
-            {x.title}
+            <span className="num">{x.no}</span>{x.title}
           </button>
         ))}
       </div>
 
       <div className="mod-body" key={mod}>
         <div className="mod-title">
-          <h2>{MODULES[mod].title}</h2><p>{MODULES[mod].sub}</p>
+          <span className="num">{MODULES[mod].no}</span>
+          <div><h2>{MODULES[mod].title}</h2><p>{MODULES[mod].sub}</p></div>
         </div>
         {mod === 0 && <StatusModule m={m} />}
         {mod === 1 && <TaskSkillModule m={m} />}
@@ -79,8 +81,8 @@ export default function WorkReport() {
         {mod === 4 && <PatternModule m={m} />}
         {mod === 5 && <NextModule insights={insights} />}
         <div className="mod-pager">
-          {mod > 0 ? <button className="btn ghost" onClick={() => goMod(mod - 1)}>이전: {MODULES[mod - 1].title}</button> : <span />}
-          {mod < MODULES.length - 1 && <button className="btn" onClick={() => goMod(mod + 1)}>다음: {MODULES[mod + 1].title}</button>}
+          {mod > 0 ? <button className="btn ghost" onClick={() => goMod(mod - 1)}>← {MODULES[mod - 1].title}</button> : <span />}
+          {mod < MODULES.length - 1 && <button className="btn" onClick={() => goMod(mod + 1)}>{MODULES[mod + 1].title} →</button>}
         </div>
       </div>
 
@@ -107,12 +109,20 @@ function StatusModule({ m }: { m: WorkMap }) {
       <dl className="profile-grid">
         {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
       </dl>
+      <h3 className="mod-sub">내 일은 이렇게 구성되어 있다</h3>
+      <div className="stats three">
+        <div className="stat"><span>정의한 업무</span><b>{m.tasks.length}개</b><small>전체 업무의 {pct(m.totalShare)}</small></div>
+        <div className="stat"><span>가장 많이 하는 활동</span><b>{m.primary ? ACTIVITY[m.primary].label : '—'}</b>
+          <small>{m.primary ? `입력한 업무의 ${pct(m.activities[0].share * 100)}` : '업무를 입력해 주세요'}</small></div>
+        <div className="stat"><span>스킬 수준 평균</span><b>{m.skillAvg === null ? '—' : `${m.skillAvg.toFixed(1)} / 5`}</b>
+          <small>{m.skillAvg === null ? '스킬 수준을 고르지 않았어요' : `${lvName(m.skillAvg)} 수준 · ${m.skills.filter((x) => x.score !== null).length}개 스킬`}</small></div>
+      </div>
       <div className="grid2 gap">
         <div className="card">
-          <h3>태스크 구성 <small>업무 {m.tasks.length}개 · 전체 업무의 {pct(m.totalShare)}</small></h3>
+          <h3>어떤 태스크들이 많은 비중을 차지하고 있나?</h3>
           <ul className="hbars">
-            {m.tasks.map((t, i) => (
-              <li key={t.id} className={i === 0 ? 'top' : ''}>
+            {m.tasks.map((t) => (
+              <li key={t.id}>
                 <span className="hb-label">{t.name}</span>
                 <span className="hb-track"><i style={{ width: `${(t.share / maxShare) * 100}%` }} /></span>
                 <b className="num">{pct(t.share)}</b>
@@ -128,21 +138,18 @@ function StatusModule({ m }: { m: WorkMap }) {
           </ul>
         </div>
         <div className="card">
-          <h3>활동 구성 <small>입력한 업무 기준 · 업무별 주요 활동</small></h3>
+          <h3>어떤 활동을 많이 수행하고 있나?</h3>
           <ul className="hbars">
-            {m.activities.map((a, i) => (
-              <li key={a.key} className={i === 0 ? 'top' : ''}>
-                <span className="hb-label">{ACTIVITY[a.key].label}</span>
-                <span className="hb-track"><i style={{ width: `${a.share * 100}%` }} /></span>
+            {m.activities.map((a) => (
+              <li key={a.key}>
+                <span className="hb-label"><i className="dot" style={{ background: ACTIVITY[a.key].color }} />{ACTIVITY[a.key].label}</span>
+                <span className="hb-track"><i style={{ width: `${a.share * 100}%`, background: ACTIVITY[a.key].color }} /></span>
                 <b className="num">{pct(a.share * 100)}</b>
               </li>
             ))}
           </ul>
+          <small>입력한 업무 안에서의 비율 · 업무마다 고른 '주요 활동' 기준</small>
         </div>
-      </div>
-      <div className="card">
-        <h3>스킬 수준 평균 <small>{m.skillAvg === null ? '스킬 수준 미입력' : `${m.skills.filter((x) => x.score !== null).length}개 스킬 기준`}</small></h3>
-        <p><b className="num">{m.skillAvg === null ? '—' : m.skillAvg.toFixed(1)}</b> / 5{m.skillAvg !== null && ` · ${lvName(m.skillAvg)}`}</p>
       </div>
     </>
   );
@@ -153,7 +160,7 @@ function TaskSkillModule({ m }: { m: WorkMap }) {
   return (
     <>
       <div className="card">
-        <h3>업무별 연결 스킬 <small>숫자: 내 수준(1~5)</small></h3>
+        <h3>업무별로 쓰는 스킬</h3>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>업무</th><th className="r">비중</th><th>주요 활동</th><th>연결 스킬 · 내 수준</th></tr></thead>
@@ -162,10 +169,10 @@ function TaskSkillModule({ m }: { m: WorkMap }) {
                 <tr key={t.id}>
                   <td><b>{t.name}</b></td>
                   <td className="r num">{pct(t.share)}</td>
-                  <td>{ACTIVITY[t.activity].label}</td>
+                  <td><span className="act-tag"><i className="dot" style={{ background: ACTIVITY[t.activity].color }} />{ACTIVITY[t.activity].label}</span></td>
                   <td>{t.skills.length
                     ? <span className="sk-pills">{t.skills.map((x) => <span key={x.name} className="sk-pill">{x.name}<em className="num">{x.score ?? '–'}</em></span>)}</span>
-                    : <span className="fine">미연결</span>}</td>
+                    : <span className="fine">연결된 스킬 없음</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -173,23 +180,21 @@ function TaskSkillModule({ m }: { m: WorkMap }) {
         </div>
       </div>
       <div className="card">
-        <h3>스킬 수준 <small>1 개념인지 · 2 가이드수행 · 3 독립수행 · 4 복잡대응 · 5 전문가</small></h3>
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead><tr><th>스킬</th><th className="r">수준</th><th>단계</th><th>현재 단계 기준</th><th>연결 업무</th></tr></thead>
-            <tbody>
-              {m.skills.map((x) => (
-                <tr key={x.def.name}>
-                  <td><b>{x.def.name}</b></td>
-                  <td className="r num">{x.score ?? '–'}</td>
-                  <td>{x.score === null ? <span className="fine">미선택</span> : SKILL_LEVELS[x.score - 1].name}</td>
-                  <td className={x.score === null ? 'dim' : ''}>{x.score !== null ? levelDesc(x.def, x.score) : x.def.def}</td>
-                  <td>{x.linked.length ? x.linked.join(', ') : <span className="fine">없음</span>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <h3>나의 스킬 수준 <small>1 개념인지 · 2 가이드수행 · 3 독립수행 · 4 복잡대응 · 5 전문가</small></h3>
+        <ul className="skill-bars">
+          {m.skills.map((x) => (
+            <li key={x.def.name}>
+              <div className="sb-head"><b>{x.def.name}</b>
+                <span>{x.score === null ? <span className="fine">미선택</span> : <><b className="num">{x.score}</b> {SKILL_LEVELS[x.score - 1].name}</>}</span>
+              </div>
+              <div className="sb-track" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((k) => <i key={k} className={x.score !== null && k <= x.score ? 'f' : ''} />)}
+              </div>
+              <small>{x.score !== null ? levelDesc(x.def, x.score) : x.def.def}
+                {x.linked.length > 0 && <> · 연결 업무: {x.linked.join(', ')}</>}</small>
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   );
@@ -203,17 +208,17 @@ function SkillUseModule({ m }: { m: WorkMap }) {
   return (
     <>
       <div className="card soft">
-        <h3>비중 있는 일에서 스킬을 얼마나 쓰고 있나요</h3>
-        <p>태스크 비중과 스킬 수준을 맞대어, 내가 시간을 많이 쓰는 일에서 스킬이 어느 정도인지 봐요. 스킬을 보강할지, 일을 조정할지 생각해 볼 수 있어요.</p>
+        <h3>내 일에 스킬을 어떻게 활용하고 있는가?</h3>
+        <p>내 업무의 태스크 비중과 스킬 수준을 매칭해, <b>내가 비중 있게 일하는 부분에서 스킬 수준이 어느 정도인지</b> 알아봅니다. 이 분석으로 스킬 보강이나 과업 조정이 필요한지 생각해 볼 수 있습니다.</p>
         <ul className="axis-notes">
           <li><b>가로축(X)</b> 응답한 태스크별 비중 — 어떤 일에 시간을 얼마나 쓰는지</li>
           <li><b>세로축(Y)</b> 태스크에 연결된 스킬의 본인 평가 평균 — 해당 태스크의 스킬 수준</li>
           <li><b>매치 점수</b> 본인이 그 태스크를 하면서 스킬을 얼마나 능숙하게 활용하고 있는지 (1~5)</li>
-          <li><b>원 크기</b> 시간 비중. 점에 마우스를 올리면 태스크 이름, 시간, 매치 점수 표시</li>
+          <li><b>원 크기</b> 시간 비중 · 점에 마우스를 올리면 태스크 이름, 시간, 매치 점수가 보여요</li>
         </ul>
       </div>
       {plotted.length ? <SkillMatchChart tasks={plotted} xMid={m.xMid} weekly={s.profile.weeklyHours} /> : (
-        <div className="card"><p className="fine">아직 그래프에 올릴 업무가 없어요. 업무 정의에서 업무마다 스킬을 연결하고, 스킬 수준을 골라 주세요.</p></div>
+        <div className="card"><p className="fine">스킬이 연결되고 수준이 선택된 업무가 아직 없어요. 업무 정의(Q.B)에서 업무마다 스킬을 연결하고, 스킬 수준(Q.S)을 골라 주세요.</p></div>
       )}
       <div className="quad-grid">
         {(['boost', 'core', 'adjust', 'expand'] as Quadrant[]).map((q) => {
@@ -227,7 +232,7 @@ function SkillUseModule({ m }: { m: WorkMap }) {
           );
         })}
       </div>
-      {missing.length > 0 && <small>스킬 미연결·미평가로 제외: {missing.map((t) => t.name).join(', ')}</small>}
+      {missing.length > 0 && <small>스킬 미연결·미평가로 그래프에서 빠진 업무: {missing.map((t) => t.name).join(', ')}</small>}
     </>
   );
 }
@@ -310,22 +315,23 @@ function PatternModule({ m }: { m: WorkMap }) {
       <div className="grid-pattern">
         <PatternMap m={m} />
         <div className="card">
+          <span className="eyebrow">내가 일하는 방식은 어떤 유형에 가까운가</span>
           {P ? (
             <>
-              <h3 className="pt-name">가장 가까운 유형은 {P.pattern}
+              <h3 className="pt-name"><i className="dot lg" style={{ background: P.color }} />{P.pattern}
                 {m.secondary && <small> · 다음으로 {ACTIVITY[m.secondary].pattern}</small>}</h3>
               <p>{P.interp}</p>
               <ul className="hbars compact">
-                {m.activities.slice(0, 3).map((a, i) => (
-                  <li key={a.key} className={i === 0 ? 'top' : ''}>
+                {m.activities.slice(0, 3).map((a) => (
+                  <li key={a.key}>
                     <span className="hb-label">{ACTIVITY[a.key].pattern}</span>
-                    <span className="hb-track"><i style={{ width: `${a.share * 100}%` }} /></span>
+                    <span className="hb-track"><i style={{ width: `${a.share * 100}%`, background: ACTIVITY[a.key].color }} /></span>
                     <b className="num">{pct(a.share * 100)}</b>
                   </li>
                 ))}
               </ul>
             </>
-          ) : <p className="fine">업무 미입력</p>}
+          ) : <p className="fine">업무를 입력하면 유형이 나타나요.</p>}
         </div>
       </div>
       {P && (
@@ -338,7 +344,7 @@ function PatternModule({ m }: { m: WorkMap }) {
         <summary>8가지 업무 유형 모두 보기</summary>
         <ul className="pattern-all">
           {ACTIVITY_KEYS.map((k) => (
-            <li key={k}><b>{ACTIVITY[k].pattern}</b>
+            <li key={k}><b><i className="dot" style={{ background: ACTIVITY[k].color }} />{ACTIVITY[k].pattern}</b>
               <span className="num">{pct(shareOf(k) * 100)}</span><small>{ACTIVITY[k].interp}</small></li>
           ))}
         </ul>
@@ -371,7 +377,7 @@ function PatternMap({ m }: { m: WorkMap }) {
             const on = k === m.primary;
             return (
               <g key={k} className={`pbub${on ? ' on' : ''}`} onMouseEnter={() => setHover(k)} onMouseLeave={() => setHover(null)}>
-                <circle cx={X(a.x)} cy={Y(a.y)} r={24} />
+                <circle cx={X(a.x)} cy={Y(a.y)} r={24} style={{ fill: a.color, stroke: a.color }} />
                 <text x={X(a.x)} y={Y(a.y) + 4} textAnchor="middle">{a.pattern}</text>
               </g>
             );
@@ -390,7 +396,7 @@ function PatternMap({ m }: { m: WorkMap }) {
           </div>
         )}
       </div>
-      <small>'나' 점: 업무별 활동 좌표를 시간 비중으로 가중평균한 위치 · 테두리가 진한 원: 시간 비중이 가장 큰 유형</small>
+      <small><i className="dot" style={{ background: 'var(--violet)' }} /> 본인 위치(활동·시간 비중 기반) · 옅은 색 원: 8유형 좌표 (본인 유형은 진하게)</small>
     </div>
   );
 }
@@ -408,13 +414,14 @@ function NextModule({ insights }: { insights: ReturnType<typeof buildInsights> }
           </li>
         ))}
       </ol>
-      {!insights.length && <p className="fine">업무·스킬 미입력</p>}
+      {!insights.length && <p className="fine">업무와 스킬을 입력하면 다음 행동이 제안됩니다.</p>}
       <div className="card exp">
         <div>
-          <h3>AI와 함께라면 무엇이 달라질까요?</h3>
-          <p>입력한 업무로 AI를 쓰기 전과 후의 시간·품질·위험을 비교해 볼 수 있어요.</p>
+          <span className="eyebrow">다음 단계</span>
+          <h3>AI와 함께 일하면 무엇이 달라질까?</h3>
+          <p>진단한 업무로 AI 도입 전후의 시간·품질·위험 변화를 시뮬레이션해 보세요.</p>
         </div>
-        <button className="btn primary" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 시작</button>
+        <button className="btn primary" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 시작 →</button>
       </div>
     </>
   );

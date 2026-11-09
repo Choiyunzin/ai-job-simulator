@@ -26,6 +26,7 @@ export function AiImpact() {
   return (
     <div className="dx">
       <div className={`dx-hero t-${dx.archetype}`}>
+        <div className="dx-icon" aria-hidden="true">{A.icon}</div>
         <div className="dx-main">
           <small>{job} · 나의 AI 업무 유형은</small>
           <h1>{A.name}</h1>
@@ -81,10 +82,11 @@ export function AiImpact() {
       {dx.firstExperiment && (
         <div className="card exp">
           <div>
-            <h3>먼저 실험해 볼 업무: {dx.firstExperiment.name}</h3>
+            <span className="eyebrow">가장 먼저 실험해볼 업무</span>
+            <h3>{dx.firstExperiment.name}</h3>
             <p>{dx.firstExperiment.reason}</p>
           </div>
-          <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션</button>
+          <button className="btn primary" onClick={() => startSim(dx.firstExperiment!.id)}>이 업무로 시뮬레이션 →</button>
         </div>
       )}
 
@@ -93,7 +95,7 @@ export function AiImpact() {
         <p className="fine">아래 네 점수 중 가장 높은 유형이 선택됩니다. 이 분류는 실제 심리검사가 아니라 교육용 게임을 위한 가상 분류이며, 어느 유형이 더 우수하다는 뜻이 아닙니다.</p>
         <div className="meters">
           {(Object.keys(ARCHETYPES) as ArchetypeId[]).map((k) => (
-            <Meter key={k} label={ARCHETYPES[k].name} value={dx.scores[k]} tone={k === dx.archetype ? 'accent' : 'good'} />
+            <Meter key={k} label={`${ARCHETYPES[k].icon} ${ARCHETYPES[k].name}`} value={dx.scores[k]} tone={k === dx.archetype ? 'accent' : 'good'} />
           ))}
         </div>
         <ul className="factors">

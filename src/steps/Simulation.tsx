@@ -65,7 +65,8 @@ export default function Simulation() {
 
   return (
     <section className="sim">
-      <h1 className="h-screen">AI를 쓰면 이 일은 얼마나 달라질까요?</h1>
+      <p className="eyebrow">STEP 4 · AI 도입 전후 생산성 시뮬레이션</p>
+      <h1 className="h-screen">AI를 도입하면 내 업무는 얼마나 달라질까?</h1>
       <p className="fine">시간은 업무 비율 × 주 {s.profile.weeklyHours}시간 근무로 환산했습니다. 근무시간은 마지막 '미래의 나'에서 바꿔 볼 수 있어요.</p>
 
       <div className="sim-pick">
@@ -226,16 +227,16 @@ function FlowRunner({ ra, k, uLabel, savingAfter }: { ra: TaskResult; k: number;
     <div className="flows">
       <FlowLane title="기존 방식" nodes={flows.before} p={prog.before} uLabel={uLabel} active={phase === 'before'} />
       <div className="flow-ctl">
-        {phase === 'idle' && <button className="btn primary" onClick={() => run('before')}>기존 방식으로 처리</button>}
+        {phase === 'idle' && <button className="btn primary" onClick={() => run('before')}>▶ 기존 방식으로 업무 처리</button>}
         {phase === 'before' && <span className="running">기존 방식으로 처리하는 중…</span>}
-        {phase === 'beforeDone' && <button className="btn ai" onClick={() => run('after')}>AI 적용</button>}
+        {phase === 'beforeDone' && <button className="btn ai" onClick={() => run('after')}>⚡ AI 도입하기</button>}
         {phase === 'after' && <span className="running">AI 노드가 작업 중…</span>}
         {phase === 'done' && (
           <div className="flow-result">
             <span>{uLabel} 노동시간</span>
             <b className="num">{fmtMin(ra.before.labor / k)} → {fmtMin(ra.after.labor / k)}</b>
             <span className={`pill ${savingAfter >= 0 ? 'good' : 'bad'}`}>{savingAfter >= 0 ? '절감' : '증가'} {Math.abs(savingAfter).toFixed(1)}%</span>
-            <button className="btn tiny ghost" onClick={replay}>다시 실행</button>
+            <button className="btn tiny ghost" onClick={replay}>↻ 다시 시뮬레이션</button>
           </div>
         )}
       </div>
@@ -270,7 +271,7 @@ function FlowLane({ title, nodes, p, uLabel, active, ai, dim }: {
             <span className="node-fill" style={{ transform: `scaleX(${per[i]})` }} />
             <span className="node-kind">{n.kind === 'ai' ? 'AI' : n.kind === 'approve' ? '대기' : '사람'}</span>
             <span className="node-label">{n.label}</span>
-            <span className="node-time num">{n.labor > 0.0005 ? fmtMin(n.labor) : ''}{n.wait > 0.0005 ? `${n.labor > 0.0005 ? ' + ' : ''}대기 ${fmtMin(n.wait)}` : ''}</span>
+            <span className="node-time num">{n.labor > 0.0005 ? fmtMin(n.labor) : ''}{n.wait > 0.0005 ? `${n.labor > 0.0005 ? ' + ' : ''}⏳${fmtMin(n.wait)}` : ''}</span>
           </li>
         ))}
       </ol>

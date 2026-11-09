@@ -37,7 +37,7 @@ export function SubmitCard({ state, report }: { state: AppState; report: ReturnT
         <button className="btn primary" disabled={!agree || busy} onClick={submit}>{busy ? '보내는 중…' : last ? '다시 제출하기' : '결과 제출하기'}</button>
       </div>
       {result && (result.ok
-        ? <p className="ok" role="status">{result.confirmed ? '제출됐어요.' : '제출 요청을 보냈어요. (접수 확인 응답은 받지 못했어요)'} 제출 번호 <span className="num">{result.id?.slice(0, 8)}</span></p>
+        ? <p className="ok" role="status">{result.confirmed ? '✓ 제출됐어요.' : '✓ 제출 요청을 보냈어요. (접수 확인 응답은 받지 못했어요)'} 제출 번호 <span className="num">{result.id?.slice(0, 8)}</span></p>
         : <p className="warn" role="alert">제출하지 못했어요. {result.reason} 잠시 후 다시 시도해 주세요.</p>)}
       {!result && last && <p className="fine">마지막 제출: {new Date(last.at).toLocaleString('ko-KR')} · 다시 제출하면 새 응답으로 한 줄 더 쌓이고, 분석 시 최신 제출을 씁니다.</p>}
     </div>

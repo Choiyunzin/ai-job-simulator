@@ -1,35 +1,75 @@
 import { useApp } from '../state';
 import { STEPS } from '../App';
 
-const STEP_DESC = [
-  '어떻게 진행되는지 살펴봐요',
-  '직무, 하는 일의 비율, 스킬 수준, AI 활용 현황을 입력해요',
-  '내 일의 구성, 스킬 활용, 일하는 방식, AI 영향을 한눈에 봐요',
-  '업무별로 AI를 쓰기 전과 후의 시간·품질·위험을 비교해요',
-  'AI와 일하다 생기는 상황에서 어떻게 대응할지 골라요',
-  '아낀 시간을 어디에 쓸지 정하고 리포트로 저장해요',
-];
-
 export default function Intro() {
   const { s, d } = useApp();
   const resumed = s.profile.tasks.length > 0;
   return (
     <section className="intro">
-      <div className="intro-head">
-        <h1>내 일을 데이터로 들여다보고, AI와 함께 일하는 모습을 그려 봐요</h1>
-        <p className="lead">하는 일과 스킬 수준을 입력하면 내 일이 어떻게 짜여 있는지, AI와 함께라면 무엇이 달라지는지 보여 드려요. 10분 정도 걸려요.</p>
+      <div className="intro-copy">
+        <p className="eyebrow">AI와 함께 일하기 · 6 STAGES</p>
+        <h1>AI와 함께라면,<br />내 일은 어떻게<br />달라질까?</h1>
+        <p className="lead">AI가 덜어줄 일과 새로 생길 일,<br />내 업무로 직접 확인해 봐요.</p>
+        <p className="body">
+          평소 하는 업무를 바탕으로 AI와 함께 일하는 모습을 미리 그려봅니다. 몇 가지 질문에 답하면
+          나의 AI 업무 유형, 달라지는 업무 시간, 미리 챙겨야 할 부분, 앞으로의 업무 모습을 확인할 수 있습니다.
+        </p>
         <div className="intro-cta">
           <button className="btn primary big" onClick={() => d({ type: 'go', step: 1, sub: resumed ? s.sub : 0 })}>
-            {resumed ? '이어서 하기' : '시작하기'}
+            {resumed ? '이어서 하기' : '시작하기'} →
           </button>
-          <span className="fine">입력한 내용은 이 브라우저에만 저장돼요.</span>
+          <span className="meta">⏱ 약 5~8분 · 총 6단계</span>
         </div>
+        <ol className="stage-list">
+          {STEPS.map((x, i) => <li key={x}><b className="num">{String(i + 1).padStart(2, '0')}</b>{x}</li>)}
+        </ol>
       </div>
-      <ol className="intro-steps">
-        {STEPS.map((x, i) => (
-          <li key={x}><span className="num">{i + 1}</span><div><b>{x}</b><p>{STEP_DESC[i]}</p></div></li>
-        ))}
-      </ol>
+      <IntroArt />
     </section>
+  );
+}
+
+/** 사람(가운데)과 AI 업무 노드가 연결된 일러스트 — 선을 따라 작업 신호가 흐름 */
+function IntroArt() {
+  const nodes = [
+    { x: 70, y: 70, t: '자료 조사' }, { x: 330, y: 60, t: '초안 작성' },
+    { x: 360, y: 230, t: '데이터 분류' }, { x: 60, y: 250, t: '검토·승인' }, { x: 210, y: 330, t: '요청 처리' },
+  ];
+  const cx = 210, cy = 175;
+  return (
+    <div className="intro-art" aria-hidden="true">
+      <svg viewBox="0 0 420 380" width="100%">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--violet)" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="var(--violet)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx={cx} cy={cy} r="150" fill="url(#glow)" />
+        <circle cx={cx} cy={cy} r="118" fill="none" stroke="var(--line)" strokeDasharray="2 6" />
+        {nodes.map((n, i) => (
+          <g key={n.t}>
+            <line x1={cx} y1={cy} x2={n.x} y2={n.y} stroke="var(--line-strong)" strokeWidth="1.2" />
+            <line x1={cx} y1={cy} x2={n.x} y2={n.y} stroke="var(--blue)" strokeWidth="2.2"
+              strokeDasharray="6 120" className="pulse" style={{ animationDelay: `${i * 0.45}s` }} />
+          </g>
+        ))}
+        {nodes.map((n, i) => (
+          <g key={n.t + 'n'} className="node-float" style={{ animationDelay: `${i * 0.3}s` }}>
+            <rect x={n.x - 46} y={n.y - 17} width="92" height="34" rx="10" fill="var(--surface-2)" stroke="var(--blue)" strokeOpacity="0.6" />
+            <circle cx={n.x - 32} cy={n.y} r="4" fill="var(--blue)" className="blink" style={{ animationDelay: `${i * 0.5}s` }} />
+            <text x={n.x - 22} y={n.y + 4.5} fontSize="12" fill="var(--fg)" fontFamily="var(--font-body)">{n.t}</text>
+          </g>
+        ))}
+        {/* 사람 + 책상 */}
+        <g>
+          <circle cx={cx} cy={cy} r="54" fill="var(--surface)" stroke="var(--violet)" strokeWidth="2" />
+          <circle cx={cx} cy={cy - 18} r="13" fill="var(--fg-dim)" />
+          <path d={`M${cx - 24} ${cy + 18} q24 -26 48 0 v6 h-48z`} fill="var(--fg-dim)" />
+          <rect x={cx - 30} y={cy + 20} width="60" height="5" rx="2" fill="var(--violet)" />
+          <rect x={cx - 14} y={cy + 4} width="28" height="16" rx="2" fill="var(--blue)" opacity="0.85" />
+        </g>
+      </svg>
+    </div>
   );
 }

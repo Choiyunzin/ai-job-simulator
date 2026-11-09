@@ -27,7 +27,8 @@ export default function App() {
       <header className="topbar">
         <div className="brand" onClick={() => d({ type: 'go', step: 0 })} role="button" tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && d({ type: 'go', step: 0 })}>
-          <span><b>AI와 함께 일하기 시뮬레이터</b><small>내 일 진단 · AI 시뮬레이션</small></span>
+          <span className="brand-mark" aria-hidden="true">◎</span>
+          <span><b>AI와 함께 일하기 시뮬레이터</b><small>AI와 함께라면, 내 일은 어떻게 달라질까?</small></span>
         </div>
         <div className="top-actions">
           {confirm ? (
@@ -37,7 +38,7 @@ export default function App() {
               <button className="btn tiny ghost" onClick={() => setConfirm(false)}>취소</button>
             </span>
           ) : (
-            <button className="btn tiny ghost" onClick={() => setConfirm(true)}>처음부터</button>
+            <button className="btn tiny ghost" onClick={() => setConfirm(true)}>↺ 처음부터</button>
           )}
         </div>
         <nav className="progress" aria-label="진행 단계">
@@ -50,7 +51,7 @@ export default function App() {
                 <li key={label} className={state}>
                   <button disabled={!reachable} aria-current={i === s.step ? 'step' : undefined}
                     onClick={() => d({ type: 'go', step: i })}>
-                    <i className="num">{i + 1}</i><span>{label}</span>
+                    <i>{state === 'done' ? '✓' : i + 1}</i><span>{label}</span>
                   </button>
                 </li>
               );
@@ -62,7 +63,7 @@ export default function App() {
         <Screen />
       </main>
       <footer className="foot">
-        모든 수치는 입력값과 가정으로 계산한 교육용 추정치예요. 입력한 내용은 이 브라우저에만 저장돼요.
+        모든 수치는 입력값과 가정에 기반한 교육용 추정치이며 실제 성과 예측이 아닙니다. 입력값은 이 브라우저에만 저장됩니다.
       </footer>
     </div>
   );
@@ -73,10 +74,10 @@ export function StepNav({ onPrev, onNext, nextLabel = '다음', disabled, hint }
 }) {
   return (
     <div className="stepnav">
-      {onPrev ? <button className="btn ghost" onClick={onPrev}>이전</button> : <span />}
+      {onPrev ? <button className="btn ghost" onClick={onPrev}>← 이전</button> : <span />}
       <div className="stepnav-r">
         {hint && <span className="hint">{hint}</span>}
-        {onNext && <button className="btn primary" onClick={onNext} disabled={disabled}>{nextLabel}</button>}
+        {onNext && <button className="btn primary" onClick={onNext} disabled={disabled}>{nextLabel} →</button>}
       </div>
     </div>
   );

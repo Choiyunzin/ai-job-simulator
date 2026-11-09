@@ -208,10 +208,10 @@ export const levelDesc = (s: SkillDef, lv: number) => s.levels[lv - 1] || SKILL_
 // ─────────────────────────────────────────────
 export type Quadrant = 'core' | 'boost' | 'expand' | 'adjust';
 export const QUADRANT_INFO: Record<Quadrant, { title: string; desc: string; tone: string }> = {
-  core: { title: '핵심 강점 업무', desc: '비중 높음, 스킬 높음. 노하우 표준화·공유 대상.', tone: 'good' },
-  boost: { title: '스킬 보강 필요', desc: '비중 높음, 스킬 낮음. 학습·AI 보조 우선 검토 대상.', tone: 'bad' },
-  expand: { title: '역량 확장 여지', desc: '비중 낮음, 스킬 높음. 역할 확대 검토 대상.', tone: 'blue' },
-  adjust: { title: '효율화·조정 검토', desc: '비중 낮음, 스킬 낮음. 위임·자동화·조정 검토 대상.', tone: 'warn' },
+  core: { title: '핵심 강점 업무', desc: '시간을 많이 쓰고 스킬도 능숙해요. 노하우를 표준화해 나누면 팀 전체의 힘이 됩니다.', tone: 'good' },
+  boost: { title: '스킬 보강 필요', desc: '시간을 많이 쓰지만 스킬 수준이 아직 낮아요. 학습이나 AI 보조를 가장 먼저 검토할 업무입니다.', tone: 'bad' },
+  expand: { title: '역량 확장 여지', desc: '잘하는 일인데 쓰는 시간이 적어요. 역할을 넓히거나 다른 사람을 도울 수 있는 영역입니다.', tone: 'blue' },
+  adjust: { title: '효율화·조정 검토', desc: '비중도 스킬 수준도 낮아요. 위임·자동화·업무 조정을 검토해 볼 만합니다.', tone: 'warn' },
 };
 export const Y_MID = 3; // 스킬 매치 기준선: 독립수행
 
@@ -286,7 +286,7 @@ export function buildInsights(m: WorkMap, firstExperiment: { name: string; reaso
   if (boost) {
     const lw = lowest(boost);
     out.push({ tag: '스킬 보강', title: `'${boost.name}' 스킬부터 한 단계 올리기`,
-      body: `업무 비중 ${fmt(boost.share)}, 연결 스킬 평균 ${boost.score!.toFixed(1)}점.${lw ? ` '${lw.name}'(${SKILL_LEVELS[(lw.score ?? 1) - 1].name})을 다음 단계로 올릴 학습 방법 1개 선정: 사내 교육, 선배 코칭, AI 보조 실습 중 택일.` : ''}` });
+      body: `업무의 ${fmt(boost.share)}를 쓰는 일인데 연결 스킬 수준이 평균 ${boost.score!.toFixed(1)}점이에요.${lw ? ` 특히 '${lw.name}'(${SKILL_LEVELS[(lw.score ?? 1) - 1].name})을 다음 단계로 올릴 학습 계획—사내 교육, 선배 코칭, AI 보조 실습—을 하나 정해 보세요.` : ''}` });
   }
   if (firstExperiment) {
     out.push({ tag: 'AI 실험', title: `AI로 먼저 실험해 볼 업무: ${firstExperiment.name}`, body: firstExperiment.reason });
@@ -294,22 +294,22 @@ export function buildInsights(m: WorkMap, firstExperiment: { name: string; reaso
   const core = by('core')[0];
   if (core) {
     out.push({ tag: '강점 확산', title: `'${core.name}' 노하우를 템플릿으로 남기기`,
-      body: '비중과 스킬 수준이 모두 높은 업무. 작업 방식을 체크리스트·지시문·예시로 정리해 AI 활용과 공유에 사용.' });
+      body: '시간도 많이 쓰고 스킬도 능숙한 핵심 업무예요. 내 방식을 체크리스트·지시문·예시로 정리해 두면 AI 활용과 동료 공유가 함께 쉬워집니다.' });
   }
   const expand = by('expand')[0];
   if (expand) {
     out.push({ tag: '역할 확장', title: `'${expand.name}' 비중을 넓힐 기회 찾기`,
-      body: '스킬 수준은 높고 비중은 낮은 업무. 역할 확대 또는 다른 업무와의 비중 조정을 팀장과 협의.' });
+      body: '잘하는 일인데 지금은 시간을 적게 쓰고 있어요. 팀장과 역할 확대나 다른 업무와의 조정을 이야기해 볼 만합니다.' });
   }
   const adjust = by('adjust')[0];
   if (adjust && out.length < 5) {
     out.push({ tag: '업무 조정', title: `'${adjust.name}'은 위임·자동화 검토`,
-      body: '비중과 스킬 수준이 모두 낮은 업무. 담당 필요성, 자동화·위임 가능성 점검.' });
+      body: '비중도 스킬 수준도 낮은 업무예요. 꼭 내가 해야 하는 일인지, 자동화하거나 다른 방식으로 처리할 수 있는지 점검해 보세요.' });
   }
   const ai = m.skills.find((x) => x.def.name.includes('AI'));
   if (ai && ai.score !== null && ai.score <= 2 && out.length < 5) {
     out.push({ tag: 'AI 역량', title: `'${ai.def.name}' 다음 단계(${SKILL_LEVELS[ai.score].name}) 도전`,
-      body: `다음 단계 기준: ${levelDesc(ai.def, ai.score + 1)}. 업무 1개를 정해 같은 방식으로 3회 반복.` });
+      body: `다음 단계는 "${levelDesc(ai.def, ai.score + 1)}"입니다. 한 업무에서 같은 방식으로 3번 반복해 보는 것부터 시작해 보세요.` });
   }
   if (m.primary && out.length < 5) {
     const A = ACTIVITY[m.primary];
@@ -318,7 +318,7 @@ export function buildInsights(m: WorkMap, firstExperiment: { name: string; reaso
   const unlinked = m.tasks.filter((t) => t.score === null).length;
   if (unlinked && out.length < 5) {
     out.push({ tag: '진단 보완', title: `스킬이 연결되지 않은 업무 ${unlinked}개`,
-      body: '업무 정의에서 업무마다 스킬을 연결하고 스킬 수준을 고르면 스킬 활용분석에 들어가요.' });
+      body: '업무 정의(Q.B)에서 업무마다 쓰는 스킬을 연결하고 스킬 수준(Q.S)을 고르면 스킬 활용분석이 더 정확해집니다.' });
   }
   return out.slice(0, 5);
 }

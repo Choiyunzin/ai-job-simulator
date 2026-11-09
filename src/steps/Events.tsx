@@ -41,8 +41,9 @@ export default function Events() {
 
   return (
     <section className="events">
-      <h1 className="h-screen">AI와 일하다 보면 이런 상황도 생겨요 <small className="fine">라운드 {s.round + 1}</small></h1>
-      <p className="lead-s">입력한 업무에 맞춰 상황 {pair.length}개를 골랐어요. 나라면 어떻게 할지 하나씩 골라 보세요.</p>
+      <p className="eyebrow">STEP 5 · AI와 일할 때 만나는 상황 · 라운드 {s.round + 1}</p>
+      <h1 className="h-screen">AI와 일하다 보면 이런 상황도 생겨요</h1>
+      <p className="lead-s">앞에서 고른 업무와 걱정되는 점을 바탕으로 상황 {pair.length}개를 골랐어요. 나라면 어떻게 할지 골라보세요.</p>
 
       <div className="event-stack">
         {visible.map((e, i) => (
@@ -61,7 +62,7 @@ export default function Events() {
       {chosenCount === pair.length && (
         <div className="card retry">
           <div><b>다른 상황도 만나볼까요?</b><small>새로운 상황 조합이 나오고, 이번 라운드의 선택은 초기화됩니다.</small></div>
-          <button className="btn ghost" onClick={() => d({ type: 'nextRound' })}>한 번 더 하기</button>
+          <button className="btn ghost" onClick={() => d({ type: 'nextRound' })}>🎲 한 번 더 도전하기</button>
         </div>
       )}
 
@@ -98,6 +99,7 @@ function EventCardView({ id, index, reasons }: { id: EventId; index: number; rea
     <article className={`event-card${chosen ? ' resolved' : ''}`} style={{ animationDelay: `${index * 0.05}s` }}>
       <div className="ev-front">
         <div className="ev-top">
+          <span className="ev-icon" aria-hidden="true">{ev.icon}</span>
           <div>
             <span className="ev-no num">상황 {index + 1}</span>
             <h2>{ev.title}</h2>
@@ -116,7 +118,7 @@ function EventCardView({ id, index, reasons }: { id: EventId; index: number; rea
       </div>
       {chosen && cmp && (
         <div className="ev-result" key={chosen}>
-          <p className="ev-res-title">{ev.choices[chosen].result}</p>
+          <p className="ev-res-title">✔ {ev.choices[chosen].result}</p>
           <div className="ev-metrics">
             {metrics.map((m) => {
               const va = m.get(cmp.a), vb = m.get(cmp.b);

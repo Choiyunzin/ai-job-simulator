@@ -16,8 +16,8 @@ import { COLORS, useResults } from '../useResults';
 import { WorkweekSim } from '../components/WorkweekSim';
 
 const sgn = (v: number) => (v > 0.0049 ? '+' : v < -0.0049 ? '−' : '±');
-const TASK_COLORS = ['#a39c8e', '#b6b0a3', '#c8c2b6', '#d9d4ca', '#e8e4dc'];
-const INVEST_COLORS = ['#0f6b5f', '#2e2a24', '#5c574d', '#8b8579', '#b6b0a3', '#d9d4ca'];
+const TASK_COLORS = ['#4F86F7', '#8A6CF0', '#3FB09C', '#E0A458', '#E57373'];
+const INVEST_COLORS = ['#8CC63F', '#3FBFAD', '#F2B33D', '#E77FAA', '#6F9BFF', '#A98BF0'];
 
 export default function Future() {
   const { s, d } = useApp();
@@ -55,7 +55,8 @@ export default function Future() {
 
   return (
     <section className="future">
-      <h1 className="h-screen">아낀 시간, 어디에 쓸까요?</h1>
+      <p className="eyebrow">STEP 6 · AI와 함께 일하는 미래의 나</p>
+      <h1 className="h-screen">AI와 함께 일하는 미래의 나</h1>
 
       <WorkweekSim hours={s.profile.weeklyHours} onChange={(h) => d({ type: 'profile', patch: { weeklyHours: h } })}
         redesign={redesign} after={after} bands={bands} />
@@ -103,7 +104,7 @@ export default function Future() {
           <h3>확보한 시간 재투자하기</h3>
           <span className={`pill ${overAlloc ? 'bad' : 'good'}`}><span className="num">{allocated.toFixed(1)} / {free.toFixed(1)}</span>시간</span>
         </div>
-        {overAlloc && <p className="warn">확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더를 줄여 주세요.</p>}
+        {overAlloc && <p className="warn">⚠ 확보한 시간보다 {(allocated - free).toFixed(1)}시간 더 배분했습니다. 슬라이더를 줄여 주세요.</p>}
         <div className="invest">
           {items.map((it, i) => {
             const v = s.reinvest[it.key] ?? 0;
@@ -126,6 +127,7 @@ export default function Future() {
 
       <div className="report-card" id="report">
         <div className="rc-head">
+          <span className="rc-icon" aria-hidden="true">{A.icon}</span>
           <div>
             <small>나의 AI 업무혁신 리포트 · {jobLabel(s.profile)}{careerLabel(s.profile) && ` · ${careerLabel(s.profile)}`}</small>
             <h2>{A.name}</h2>
@@ -214,9 +216,9 @@ export default function Future() {
       </details>
 
       <div className="endbar">
-        <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>다른 상황으로 다시 해보기</button>
-        <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>시뮬레이션 다시 보기</button>
-        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>업무 수정하기</button>
+        <button className="btn ghost" onClick={() => { d({ type: 'nextRound' }); d({ type: 'go', step: 4 }); }}>🎲 다른 상황으로 다시 해보기</button>
+        <button className="btn ghost" onClick={() => d({ type: 'go', step: 3 })}>↻ 시뮬레이션 다시 보기</button>
+        <button className="btn ghost" onClick={() => d({ type: 'go', step: 1, sub: 2 })}>✎ 업무 수정하기</button>
       </div>
       <StepNav onPrev={() => d({ type: 'go', step: 4 })} />
     </section>
@@ -256,7 +258,7 @@ function Exports({ json, csv, text }: { json: string; csv: string; text: string 
       <h3>결과 저장하기</h3>
       <div className="ex-btns">
         {!framed && <>
-          <button className="btn" onClick={() => window.print()}>인쇄 / PDF 저장</button>
+          <button className="btn" onClick={() => window.print()}>🖨 인쇄 / PDF 저장</button>
           <button className="btn" onClick={() => download(`ai-simulator-${stamp}.json`, json, 'application/json')}>JSON 내려받기</button>
           <button className="btn" onClick={() => download(`ai-simulator-${stamp}.csv`, csv, 'text/csv')}>CSV 내려받기</button>
         </>}
